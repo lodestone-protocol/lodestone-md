@@ -18,9 +18,9 @@
 
 | 任务 | 内容 | 入口 | 状态 |
 |---|---|---|---|
-| T1 | 一致性维护：以 spec 仓语料为权威，语料变更走 spec 仓 | ADR-0003 | ⏳ |
+| T1 | 一致性维护：以 spec 仓语料为权威，语料变更走 spec 仓 | ADR-0003 + spec 仓 CI | ✅ |
 | T2 | 观察项登记：comrak↔CommonMark 0.31.2 核对 | ADR-0001 附注 | ✅ |
-| T3 | 性能复验（语料迁移后 bench 基线） | examples/bench.rs | ⏳ |
+| T3 | 性能复验（语料迁移后 bench 基线） | examples/bench.rs 头注释 | ✅ |
 | T4 | （原 crates.io 发布）**推迟**——仅当第三方 Rust 依赖需求出现 | 决策档案 §六 | ⏸ |
 
 ### 1.2 代码真相源
@@ -56,16 +56,16 @@
 
 | 任务 | 内容 | 状态 | 测试 |
 |---|---|---|---|
-| T1 | 一致性维护 | ⏳ 待启动 | - |
+| T1 | 一致性维护 | ✅（spec 仓 CI 兜底） | fixtures-check |
 | T2 | comrak↔CommonMark 核对 | ✅（无偏差，维持锁定） | ADR-0001 附注 |
-| T3 | 性能复验 | ⏳ 待启动 | - |
+| T3 | 性能复验 | ✅（~0.74–0.76s @5000 节点） | examples/bench.rs 头注释 |
 | T4 | crates.io | ⏸ 推迟 | - |
 
 ### 1.7 验收标准
 
-- T1：语料变更零漂移（guard 生效、golden 字节比对通过）。
+- T1：语料变更零漂移（spec 仓 fixtures-check CI + md guard + golden 字节比对）。
 - T2：comrak 0.54 ↔ CommonMark 0.31.2 核对结论记入 ADR-0001（✅ 追加完成）。
-- T3：bench 基线复验无回归。
+- T3：bench 基线复验无回归（✅ 与迁移前 731ms 同量级）。
 
 ---
 

@@ -4,6 +4,9 @@
 //! Run with `cargo run --release --example bench -- [nodes]`, default 5000
 //! nodes. Coarse health check only, not a micro-benchmark (determinism first;
 //! no statistics library needed).
+//!
+//! Baseline (post spec-submodule migration, lodestone-md@4d3723a, release,
+//! 5000 nodes / ~870 KB): ~0.74–0.76 s single pass, single thread.
 
 use std::time::Instant;
 
