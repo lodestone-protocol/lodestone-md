@@ -79,7 +79,7 @@ lodestone-md 就是这个权威实现。它生来肩负三件事：**兑现**（
 |---|---|---|
 | 库调用 | `mddag::parse(&str) -> ParseResult` | 嵌入 Rust 工具链 |
 | CLI | `mddag <file>` 输出 JSON | 流水线 / 调试 |
-| Golden Fixture | `tests/fixtures/` 即协议一致性语料 | 其他实现验证器对齐 |
+| Golden Fixture | spec 仓 `fixtures/`（submodule 导入）即协议一致性语料 | 其他实现验证器对齐（ADR-0003） |
 
 ## 四、不可替代性
 

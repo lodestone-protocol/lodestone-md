@@ -1,7 +1,7 @@
 //! Golden Fixture tests (spec "recommendation E").
 //!
-//! Each `tests/fixtures/<name>.md` has a matching `<name>.json` expected
-//! output (a full §8 contract snapshot). `UPDATE_GOLDEN=1 cargo test`
+//! Each `<name>.md` in the lodestone-spec corpus has a matching `<name>.json`
+//! expected output (a full §8 contract snapshot). `UPDATE_GOLDEN=1 cargo test`
 //! regenerates the expected files; generated files must be reviewed by hand
 //! (especially the §10 figures).
 
@@ -9,8 +9,12 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
+/// Fixture corpus is imported from the lodestone-spec submodule (spec repo is
+/// the authoritative source). Init with `git submodule update --init --recursive`.
+const FIXTURES_BASE: &str = "vendor/lodestone-spec/fixtures";
+
 fn fixture_paths() -> Vec<PathBuf> {
-    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(FIXTURES_BASE);
     let mut cases: Vec<PathBuf> = fs::read_dir(&dir)
         .expect("fixtures directory missing")
         .filter_map(|e| e.ok())
@@ -61,7 +65,9 @@ fn parse_is_deterministic() {
 }
 
 fn fixture_path(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(name)
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join(FIXTURES_BASE)
+        .join(name)
 }
 
 /// Review decision P1: cross-implementation anchor for Simple vs Full Case
@@ -105,10 +111,8 @@ fn metadata_accepted_across_blank_gap() {
 /// (independent of snapshot files).
 #[test]
 fn spec_10_example_values() {
-    let input = fs::read_to_string(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/10_example.md"),
-    )
-    .expect("read §10 fixture");
+    let input = fs::read_to_string(fixture_path("10_example.md"))
+        .expect("read §10 fixture");
     let r = mddag::parse(&input);
 
     let expect: [(&str, bool, usize, usize, usize); 5] = [

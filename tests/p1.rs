@@ -41,6 +41,9 @@ fn l1_skeleton_is_full_contract() {
     );
 }
 
+/// Fixture corpus lives in the lodestone-spec submodule (authoritative source).
 fn fixture(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(name)
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("vendor/lodestone-spec/fixtures")
+        .join(name)
 }

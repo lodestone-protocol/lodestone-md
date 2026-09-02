@@ -181,7 +181,7 @@ mod tests {
 
     #[test]
     fn spec_10_projection() {
-        let input = include_str!("../tests/fixtures/10_example.md");
+        let input = include_str!("../vendor/lodestone-spec/fixtures/10_example.md");
         let r = parse(input);
         let p = project(&r);
         let get = |from: &str, to: &str| {
@@ -200,7 +200,7 @@ mod tests {
 
     #[test]
     fn coherent_and_cyclic() {
-        let input = include_str!("../tests/fixtures/cycle_global.md");
+        let input = include_str!("../vendor/lodestone-spec/fixtures/cycle_global.md");
         let r = parse(input);
         let p = project(&r);
         let coherent = p.iter().filter(|e| e.label == "coherent").count();
@@ -215,7 +215,7 @@ mod tests {
 
     #[test]
     fn redundant_label() {
-        let input = include_str!("../tests/fixtures/edges_derive_fold.md");
+        let input = include_str!("../vendor/lodestone-spec/fixtures/edges_derive_fold.md");
         let r = parse(input);
         let p = project(&r);
         // The surviving folded edge carries W-REDUNDANT-EDGE → redundant
@@ -234,7 +234,7 @@ mod tests {
 
     #[test]
     fn review_disputes() {
-        let input = include_str!("../tests/fixtures/10_example.md");
+        let input = include_str!("../vendor/lodestone-spec/fixtures/10_example.md");
         let r = parse(input);
         let rev = review(&r);
         assert_eq!(rev.disputes.len(), 1);

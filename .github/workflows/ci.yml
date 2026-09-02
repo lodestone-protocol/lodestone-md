@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The Golden Fixture corpus lives in the lodestone-spec submodule.
+          submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -19,3 +22,26 @@ jobs:
       - run: cargo clippy --all-targets -- -D warnings
       # The crate must always package cleanly (release gate).
       - run: cargo publish --dry-run
+
+  # Guard: PRs must not mutate the lodestone-spec corpus through the submodule
+  # (prevents UPDATE_GOLDEN abuse — expected outputs are canonical bytes owned
+  # by the spec repository).
+  guard-submodule:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Fail on changes under the spec submodule
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          changed=$(git diff --name-only "$base"...HEAD -- vendor/lodestone-spec)
+          if [ -n "$changed" ]; then
+            echo "::error::PRs must not modify the lodestone-spec corpus (vendor/lodestone-spec). Fixture inputs and expected outputs are canonical in the spec repository." >&2
+            echo "$changed" >&2
+            exit 1
+          fi
+          echo "submodule untouched"

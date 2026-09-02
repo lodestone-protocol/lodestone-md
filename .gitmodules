@@ -1,0 +1,3 @@
+[submodule "vendor/lodestone-spec"]
+	path = vendor/lodestone-spec
+	url = https://github.com/lodestone-protocol/lodestone-spec
