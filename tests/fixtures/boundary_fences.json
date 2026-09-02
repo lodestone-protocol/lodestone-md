@@ -1,0 +1,34 @@
+{
+  "doc_meta": null,
+  "nodes": [
+    {
+      "id": "real-01",
+      "status": "draft",
+      "valid": true,
+      "tags": [],
+      "chars": 73,
+      "body_start": 3,
+      "body_end": 8,
+      "title": "真标题"
+    },
+    {
+      "id": "indented-01",
+      "status": "draft",
+      "valid": true,
+      "tags": [],
+      "chars": 44,
+      "body_start": 12,
+      "body_end": 14,
+      "title": "缩进代码块节点"
+    }
+  ],
+  "edges": [],
+  "diagnostics": [],
+  "graph": {
+    "nodes": [
+      "real-01",
+      "indented-01"
+    ],
+    "edges": []
+  }
+}

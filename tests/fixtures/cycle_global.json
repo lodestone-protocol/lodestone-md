@@ -1,0 +1,120 @@
+{
+  "doc_meta": null,
+  "nodes": [
+    {
+      "id": "ca",
+      "status": "aligned",
+      "valid": true,
+      "tags": [],
+      "chars": 1,
+      "body_start": 3,
+      "body_end": 3,
+      "title": "甲"
+    },
+    {
+      "id": "cb",
+      "status": "aligned",
+      "valid": true,
+      "tags": [],
+      "chars": 1,
+      "body_start": 6,
+      "body_end": 6,
+      "title": "乙"
+    },
+    {
+      "id": "cc",
+      "status": "aligned",
+      "valid": true,
+      "tags": [],
+      "chars": 1,
+      "body_start": 9,
+      "body_end": 9,
+      "title": "丙"
+    },
+    {
+      "id": "cd",
+      "status": "aligned",
+      "valid": true,
+      "tags": [],
+      "chars": 1,
+      "body_start": 12,
+      "body_end": 12,
+      "title": "丁"
+    }
+  ],
+  "edges": [
+    {
+      "from": "ca",
+      "to": "cb",
+      "relation": "depend",
+      "effective": false,
+      "failure": "E-CYCLE"
+    },
+    {
+      "from": "cb",
+      "to": "cc",
+      "relation": "depend",
+      "effective": false,
+      "failure": "E-CYCLE"
+    },
+    {
+      "from": "cc",
+      "to": "ca",
+      "relation": "depend",
+      "effective": false,
+      "failure": "E-CYCLE"
+    },
+    {
+      "from": "cc",
+      "to": "cd",
+      "relation": "depend",
+      "effective": true,
+      "failure": null
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "W-CYCLE-DECLARED",
+      "level": "warning",
+      "node_id": null,
+      "edge": null,
+      "message": "declared normalized edge set contains 3 cyclic edge(s)"
+    },
+    {
+      "code": "E-CYCLE",
+      "level": "error",
+      "node_id": "ca",
+      "edge": "ca -> cb",
+      "message": "edge participates in a cycle in the global graph; ineffective"
+    },
+    {
+      "code": "E-CYCLE",
+      "level": "error",
+      "node_id": "cb",
+      "edge": "cb -> cc",
+      "message": "edge participates in a cycle in the global graph; ineffective"
+    },
+    {
+      "code": "E-CYCLE",
+      "level": "error",
+      "node_id": "cc",
+      "edge": "cc -> ca",
+      "message": "edge participates in a cycle in the global graph; ineffective"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      "ca",
+      "cb",
+      "cc",
+      "cd"
+    ],
+    "edges": [
+      {
+        "from": "cc",
+        "to": "cd",
+        "relation": "depend"
+      }
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "doc_meta": null,
+  "nodes": [
+    {
+      "id": "up-a",
+      "status": "aligned",
+      "valid": true,
+      "tags": [],
+      "chars": 1,
+      "body_start": 3,
+      "body_end": 3,
+      "title": "已对齐"
+    },
+    {
+      "id": "up-b",
+      "status": "draft",
+      "valid": true,
+      "tags": [],
+      "chars": 1,
+      "body_start": 6,
+      "body_end": 6,
+      "title": "未对齐"
+    }
+  ],
+  "edges": [
+    {
+      "from": "up-a",
+      "to": "up-b",
+      "relation": "depend",
+      "effective": false,
+      "failure": "W-UPSTREAM-PENDING"
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "W-UPSTREAM-PENDING",
+      "level": "warning",
+      "node_id": "up-a",
+      "edge": "up-a -> up-b",
+      "message": "aligned node has a non-aligned upstream"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      "up-a",
+      "up-b"
+    ],
+    "edges": []
+  }
+}

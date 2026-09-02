@@ -1,0 +1,23 @@
+{
+  "doc_meta": null,
+  "nodes": [
+    {
+      "id": "first-01",
+      "status": "draft",
+      "valid": true,
+      "tags": [],
+      "chars": 3,
+      "body_start": 3,
+      "body_end": 3,
+      "title": "直接开始"
+    }
+  ],
+  "edges": [],
+  "diagnostics": [],
+  "graph": {
+    "nodes": [
+      "first-01"
+    ],
+    "edges": []
+  }
+}

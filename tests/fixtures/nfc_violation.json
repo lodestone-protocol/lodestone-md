@@ -1,0 +1,31 @@
+{
+  "doc_meta": null,
+  "nodes": [
+    {
+      "id": "cafe",
+      "status": "draft",
+      "valid": true,
+      "tags": [],
+      "chars": 23,
+      "body_start": 3,
+      "body_end": 3,
+      "title": "café"
+    }
+  ],
+  "edges": [],
+  "diagnostics": [
+    {
+      "code": "W-NFC-VIOLATION",
+      "level": "warning",
+      "node_id": "cafe",
+      "edge": null,
+      "message": "title at line 1 is not in NFC form"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      "cafe"
+    ],
+    "edges": []
+  }
+}

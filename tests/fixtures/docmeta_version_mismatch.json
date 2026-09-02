@@ -1,0 +1,33 @@
+{
+  "doc_meta": {
+    "version": "1.2"
+  },
+  "nodes": [
+    {
+      "id": "old-01",
+      "status": "draft",
+      "valid": true,
+      "tags": [],
+      "chars": 27,
+      "body_start": 5,
+      "body_end": 5,
+      "title": "旧版本声明"
+    }
+  ],
+  "edges": [],
+  "diagnostics": [
+    {
+      "code": "W-VERSION-MISMATCH",
+      "level": "warning",
+      "node_id": null,
+      "edge": null,
+      "message": "document version \"1.2\" is not supported (\"1.3\"); parsing best-effort"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      "old-01"
+    ],
+    "edges": []
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "doc_meta": null,
+  "nodes": [
+    {
+      "id": null,
+      "status": "draft",
+      "valid": false,
+      "tags": [],
+      "chars": 73,
+      "body_start": 2,
+      "body_end": 3,
+      "title": "变体形态"
+    }
+  ],
+  "edges": [],
+  "diagnostics": [
+    {
+      "code": "W-META-PLACEMENT",
+      "level": "warning",
+      "node_id": null,
+      "edge": null,
+      "message": "mddag-like comment at line 2 does not match the canonical form; ignored"
+    },
+    {
+      "code": "E-MISSING-ID",
+      "level": "error",
+      "node_id": null,
+      "edge": null,
+      "message": "node at line 1 has no usable id (empty slug from title \"变体形态\")"
+    }
+  ],
+  "graph": {
+    "nodes": [],
+    "edges": []
+  }
+}

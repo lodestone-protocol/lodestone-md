@@ -1,0 +1,78 @@
+{
+  "doc_meta": null,
+  "nodes": [
+    {
+      "id": "degrade-01",
+      "status": "draft",
+      "valid": true,
+      "tags": [],
+      "chars": 60,
+      "body_start": 3,
+      "body_end": 3,
+      "title": "降级示范"
+    },
+    {
+      "id": "target-01",
+      "status": "draft",
+      "valid": true,
+      "tags": [],
+      "chars": 6,
+      "body_start": 6,
+      "body_end": 6,
+      "title": "正常目标"
+    }
+  ],
+  "edges": [
+    {
+      "from": "degrade-01",
+      "to": "ghost-01",
+      "relation": "depend",
+      "effective": false,
+      "failure": "E-REF-NOT-FOUND"
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "E-META-FIELD",
+      "level": "error",
+      "node_id": "degrade-01",
+      "edge": null,
+      "message": "invalid \"status\"; fallback to \"draft\""
+    },
+    {
+      "code": "E-META-FIELD",
+      "level": "error",
+      "node_id": "degrade-01",
+      "edge": null,
+      "message": "edge entry missing or invalid \"to\"/\"relation\"; edge dropped"
+    },
+    {
+      "code": "E-META-FIELD",
+      "level": "error",
+      "node_id": "degrade-01",
+      "edge": null,
+      "message": "edge entry missing or invalid \"to\"/\"relation\"; edge dropped"
+    },
+    {
+      "code": "E-META-FIELD",
+      "level": "error",
+      "node_id": "degrade-01",
+      "edge": null,
+      "message": "\"tags\" is not an array of strings; field ignored"
+    },
+    {
+      "code": "E-REF-NOT-FOUND",
+      "level": "error",
+      "node_id": "degrade-01",
+      "edge": "degrade-01 -> ghost-01",
+      "message": "edge references a missing or invalid node"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      "degrade-01",
+      "target-01"
+    ],
+    "edges": []
+  }
+}

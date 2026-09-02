@@ -1,0 +1,45 @@
+{
+  "doc_meta": null,
+  "nodes": [
+    {
+      "id": "empty-01",
+      "status": "draft",
+      "valid": true,
+      "tags": [],
+      "chars": 0,
+      "body_start": null,
+      "body_end": null,
+      "title": "空正文"
+    },
+    {
+      "id": "blanky",
+      "status": "draft",
+      "valid": true,
+      "tags": [],
+      "chars": 26,
+      "body_start": 7,
+      "body_end": 11,
+      "title": "带空白"
+    },
+    {
+      "id": "tail-01",
+      "status": "draft",
+      "valid": true,
+      "tags": [],
+      "chars": 2,
+      "body_start": 15,
+      "body_end": 15,
+      "title": "尾节点"
+    }
+  ],
+  "edges": [],
+  "diagnostics": [],
+  "graph": {
+    "nodes": [
+      "empty-01",
+      "blanky",
+      "tail-01"
+    ],
+    "edges": []
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "doc_meta": null,
+  "nodes": [
+    {
+      "id": "dockey-01",
+      "status": "draft",
+      "valid": true,
+      "tags": [],
+      "chars": 26,
+      "body_start": 5,
+      "body_end": 5,
+      "title": "文档级重复键"
+    }
+  ],
+  "edges": [],
+  "diagnostics": [
+    {
+      "code": "W-DOC-META",
+      "level": "warning",
+      "node_id": null,
+      "edge": null,
+      "message": "document-level metadata JSON has duplicate keys; ignored"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      "dockey-01"
+    ],
+    "edges": []
+  }
+}
