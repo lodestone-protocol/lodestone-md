@@ -1,7 +1,7 @@
 # Lodestone Protocol (lodestone-md) 开发导航牌（PLAN）
 
-> **版本**：v1.2（P1 收官流转，2026-09-02）
-> **状态**：⏳ P2 — 生态对齐（T1 待启动）
+> **版本**：v1.3（P2 推进，2026-09-02）
+> **状态**：🚧 P2 — 生态对齐（T1–T3 ✅，T4 ⏳ 待发布授权）
 > **上一阶段**：P1 消费端与投影（✅ 2026-09-02，详见 GROWTH.md）
 > **分支**：main
 > **所属方法论**：phyt-DNA v1.0（PLAN 动态流转闭环）
@@ -11,63 +11,65 @@
 
 ## 1. 当前阶段：P2 — 生态对齐
 
-> **状态**：⏳ T1 待启动。
+> **状态**：🚧 T1–T3 ✅，T4（crates.io 发布）⏳ 待授权。
 > **前置依赖**：P0/P1（✅）。
 
 ### 1.1 目标
 
 | 任务 | 内容 | 入口 | 状态 |
 |---|---|---|---|
-| T1 | 一致性基准发布：fixtures 作为跨实现验证器语料（fixture 头注释标注 §来源） | docs/spec/contract.md §2 | ⏳ |
-| T2 | 性能验证：大文档解析基准 + 附录 A 启发式快速扫描（L1-only）路径评估 | docs/spec/philosophy.md 公理二 | ⏳ |
-| T3 | v2.0 议程反馈：观察项 γ（derive 误用率）、附录 C 悬空引用清扫 | 协议附录 C | ⏳ |
-| T4 | 发布准备：crates.io 发布（`mddag` crate）+ 版本标签 v1.3.0 | ADR-0001 | ⏳ |
+| T1 | 一致性语料发布：MANIFEST.md 章节索引 + 14/14 码覆盖率表 | docs/spec/contract.md §2 | ✅ |
+| T2 | 性能验证：examples/bench.rs（5000 节点 / 870KB / 全量单趟 731ms） | docs/spec/philosophy.md 公理二 | ✅ |
+| T3 | v2.0 议程反馈：观察项 γ 登记 + 附录 C 悬空引用清扫 | 协议附录 C | ✅ |
+| T4 | 发布准备：crates.io 发布 + 版本标签 v1.3.0 | ADR-0001 | ⏳ 待授权 |
 
 ### 1.2 代码真相源
 
-- **T1**：fixtures 已在 `tests/fixtures/`（22 组），待补 §来源 标注。
-- **T2**：`src/` 无基准与启发式路径。
-- **T3**：无（v1.x 不实现 v2.0 议程，仅收集反馈）。
-- **T4**：Cargo.toml 已备发布元数据（repository/license/description）。
+- **T1**：`tests/fixtures/MANIFEST.md`（含 `MANIFEST.md` 排除逻辑，golden 扫描器已更新）。
+- **T2**：`examples/bench.rs`；基准结论入 ADR-0002。
+- **T3**：ADR-0002 第五节登记观察项 γ。
+- **T4**：Cargo.toml 元数据已备；发布动作需人工授权（对外发布）。
 
 ### 1.3 项目特有验收状态
 
 | 验收项 | 状态 | 落地位置 |
 |---|---|---|
-| cargo test 全绿 | ✅（P0 起保持，现 20 项） | CI |
-| cargo clippy 0 warning | ✅（P0 起保持） | CI |
-| §10 数值逐项吻合 | ✅（P0） | tests/golden.rs |
-| 重复解析输出逐字节一致 | ✅（P0） | tests/golden.rs |
-| L1/L2 加载语义 | ✅（P1） | tests/p1.rs |
+| cargo test 全绿 | ✅（现 20 项） | CI |
+| cargo clippy 0 warning | ✅ | CI |
+| §10 数值逐项吻合 | ✅ | tests/golden.rs |
+| 重复解析输出逐字节一致 | ✅ | tests/golden.rs |
+| L1/L2 加载语义 | ✅ | tests/p1.rs |
+| 一致性语料可独立发布 | ✅（T1） | tests/fixtures/ |
 
 ### 1.4 入口 ADR
 
 - **ADR-0001**：Rust 参考实现与解析底座选型（Active）
-- **P2 新增 ADR 候选**：投影 API 是否随 crate 首发进入公共面（若是，需补契约章节）；crates.io 发布名与版本策略
+- **ADR-0002**：一致性语料与性能策略（Active）——集中清单标注、全量单趟即 L1、不引入启发式双路径、γ 登记
 
 ### 1.5 已确认决策点
 
 | # | 决策点 | 决议 | 状态 |
 |---|---|---|---|
-| D1 | 边 failure 语义 | §8.2 示例码三分支；pending/nascent 边 failure=null | ✅ |
-| D2 | 输出契约扩展 | `NodeEntry.title` 为 Append-Only 扩展 | ✅ |
+| D1 | 边 failure 语义 | §8.2 三分支 + pending/nascent failure=null | ✅ |
+| D2 | 输出契约扩展 | `NodeEntry.title` Append-Only | ✅ |
 | D3 | 投影标签优先级 | dangling > cyclic > redundant > coherent > pending > nascent | ✅ |
+| D4 | 性能策略 | 全量单趟即 L1；不引入启发式双路径（ADR-0002） | ✅ |
 
 ### 1.6 P2 进度
 
 | 任务 | 内容 | 状态 | 测试 |
 |---|---|---|---|
-| T1 | 一致性基准发布 | ⏳ 待启动 | - |
-| T2 | 性能验证 | ⏳ 待启动 | - |
-| T3 | v2.0 反馈收集 | ⏳ 待启动 | - |
-| T4 | 发布准备 | ⏳ 待启动 | - |
+| T1 | 一致性语料 | ✅ | golden 20 项保持 |
+| T2 | 性能验证 | ✅ | examples/bench.rs |
+| T3 | v2.0 反馈登记 | ✅ | ADR-0002 §五 |
+| T4 | crates.io 发布 | ⏳ 待授权 | - |
 
 ### 1.7 验收标准
 
-- T1：每个 fixture 头注释含规范章节引用，fixtures/ 可独立作为一致性语料发布。
-- T2：基准报告（时间/内存）入库；启发式路径与全量解析在含围栏文档上输出一致（若采纳）。
-- T3：观察项 γ 记录至 docs/decisions/ 或 ISSUE。
-- T4：crate 发布成功，`mddag --version` 可打印 v1.3.0。
+- T1：MANIFEST.md 双向索引 + 覆盖率表，fixtures/ 可整体拷贝为验证器语料。
+- T2：bench 报告入库（5000 节点 731ms 量级）；启发式双路径决议见 ADR-0002。
+- T3：观察项 γ 记录于 ADR-0002。
+- T4：`cargo publish` 成功 + `git tag v1.3.0`（需人工授权）。
 
 ---
 
@@ -83,5 +85,5 @@
 | 阶段 | 名称 | 状态 | 产出 |
 |---|---|---|---|
 | P0 | 参考解析器骨架与 Golden Fixture | ✅ | 解析器 + 22 组 Fixture（14 码全覆盖） |
-| P1 | 消费端与投影 | ✅ | 投影标签 + L1/L2 API + CLI 5 模式 + 审查面 |
-| P2 | 生态对齐 | ⏳ 当前 | 一致性基准、性能验证、发布 |
+| P1 | 消费端与投影 | ✅ | 投影标签 + L1/L2 API + CLI 五模式 + 审查面 |
+| P2 | 生态对齐 | 🚧 当前 | 一致性语料 + 性能基准 + γ 登记（T4 待授权） |

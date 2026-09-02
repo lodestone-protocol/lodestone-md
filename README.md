@@ -40,11 +40,24 @@ let result = mddag::parse(&markdown_text);
 ## 测试
 
 ```bash
-cargo test                        # 22 组 Golden Fixture + 单元测试 + 确定性断言
-UPDATE_GOLDEN=1 cargo test        # 重新生成期望快照（须人工核对）
+cargo test                        # 全量：单元 + Golden Fixture + 确定性断言
+UPDATE_GOLDEN=1 cargo test        # 重新生成期望快照（须人工核对，见 MANIFEST.md）
+cargo clippy --all-targets        # 验收门槛：0 warnings
+cargo run --release --example bench -- 5000   # 性能体检（非 CI 门槛）
 ```
 
-Fixture 覆盖规范 §11 全部 14 个错误/警告码与 §10 黄金基准，见 `tests/fixtures/`。
+### 验收状态（当前实测）
+
+| 门槛 | 实测 | 验证位置 |
+|---|---|---|
+| `cargo test` | ✅ 20 passed（15 单元 + 3 Golden + 2 P1 集成） | CI / 本地 |
+| `cargo clippy --all-targets` | ✅ 0 warnings | CI / 本地 |
+| §10 黄金基准 | ✅ chars 12/74/23/11/3，区间 5–5/9–15/19–19/23–23/27–27，全局图为空，逐项断言 | `tests/golden.rs::spec_10_example_values` |
+| 解析确定性 | ✅ 同输入两次解析输出逐字节一致 | `tests/golden.rs::parse_is_deterministic` |
+| 错误/警告码覆盖 | ✅ §11 全部 14 码（22 组 Fixture 一一对应） | `tests/fixtures/MANIFEST.md` |
+| L1/L2 加载语义 | ✅ `body_text()` 与派生字段逐字符一致（含围栏/空正文） | `tests/p1.rs` |
+
+> 状态以 2026-09-02 P2 实测为准；CI 徽章反映 push 后最新结果。每次合并前须全绿 + 0 warning（DNA 防腐化铁律）。
 
 ## 项目治理
 

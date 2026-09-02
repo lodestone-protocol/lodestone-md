@@ -13,7 +13,10 @@ fn fixture_paths() -> Vec<PathBuf> {
         .expect("fixtures directory missing")
         .filter_map(|e| e.ok())
         .map(|e| e.path())
-        .filter(|p| p.extension().map(|x| x == "md").unwrap_or(false))
+        .filter(|p| {
+            p.extension().map(|x| x == "md").unwrap_or(false)
+                && p.file_name().and_then(|n| n.to_str()) != Some("MANIFEST.md")
+        })
         .collect();
     cases.sort();
     cases
