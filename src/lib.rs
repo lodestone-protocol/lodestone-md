@@ -12,6 +12,7 @@ pub mod jsonutil;
 pub mod lines;
 pub mod nodemeta;
 pub mod output;
+pub mod projection;
 pub mod scanner;
 
 use unicode_normalization::UnicodeNormalization;
@@ -264,4 +265,30 @@ pub fn parse(input: &str) -> ParseResult {
 /// 供消费方使用的状态常量再导出。
 pub mod states {
     pub use crate::nodemeta::{STATUS_ALIGNED, STATUS_CONVERGED, STATUS_DRAFT};
+}
+
+/// L2 定点正文（§9 三级加载）：按节点 id 返回正文文本。
+///
+/// 文本与派生字段一致：正文区间内各行以 U+000A 连接（不含末行换行）。
+/// id 不存在或正文为空时返回 None 之外，仍返回 Some("")（空正文是合法状态）。
+pub fn body_text(input: &str, id: &str) -> Result<String, BodyError> {
+    let result = parse(input);
+    let node = result
+        .nodes
+        .iter()
+        .find(|n| n.id.as_deref() == Some(id))
+        .ok_or(BodyError::NodeNotFound)?;
+    match (node.body_start, node.body_end) {
+        (Some(lo), Some(hi)) => {
+            let text = input.strip_prefix('\u{FEFF}').unwrap_or(input);
+            let lines = lines::split_lines(text);
+            Ok(lines[lo - 1..hi].join("\n"))
+        }
+        _ => Ok(String::new()),
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum BodyError {
+    NodeNotFound,
 }

@@ -14,15 +14,19 @@
 
 ```bash
 cargo build --release
-target/release/mddag tests/fixtures/10_example.md   # 输出 §8 契约 JSON
-echo '# 我的节点' | target/release/mddag -          # stdin
+target/release/mddag tests/fixtures/10_example.md          # §8 契约 JSON
+target/release/mddag --body concl-01 tests/fixtures/10_example.md   # L2 定点正文
+target/release/mddag --projection tests/fixtures/10_example.md      # 附录 A 边投影标签
+target/release/mddag --review tests/fixtures/10_example.md          # 分歧域 + 警告概览
 ```
 
 库调用：
 
 ```rust
 let result = mddag::parse(&markdown_text);
-// result.nodes / result.edges / result.diagnostics / result.graph
+// L1 骨架：result.nodes / result.edges / result.diagnostics / result.graph
+// L2 定点正文：mddag::body_text(&markdown_text, "concl-01")
+// 附录 A 投影：mddag::projection::project(&result) / mddag::projection::review(&result)
 ```
 
 ## 三级加载（消费方原生读取模式）
