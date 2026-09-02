@@ -1,74 +1,86 @@
 # lodestone-md
 
-> **Lodestone Protocol (MD-DAG) v1.3 Final 权威参考实现**
-> 为人机对话的知识脱水与收敛而生长：节点如磁石吸附结论，边如磁力线登记依赖与分歧，draft → converged → aligned 标记成型阶段。
+> **Reference implementation of the Lodestone Protocol (MD-DAG) v1.3 Final**
+> The protocol grows out of knowledge dehydration in human–AI dialogue: nodes
+> act like lodestones that absorb conclusions, edges register dependencies and
+> disagreements as magnetic field lines, and the state machine
+> `draft → converged → aligned` marks each node's maturity.
 
 [![CI](https://github.com/lodestone-protocol/lodestone-md/actions/workflows/ci.yml/badge.svg)](https://github.com/lodestone-protocol/lodestone-md/actions/workflows/ci.yml)
 
-## 是什么
+## What it is
 
-- **协议**：在标准 Markdown 中以 HTML 注释嵌入 DAG 结构元数据（节点 / 边 / 状态机），渲染透明、机器可确定性解析、零平台依赖。规范全文见协议规范文档（v1.3 Final）。
-- **本仓库**：协议的参考解析器（Rust）+ Golden Fixture 测试套件。解析输出是文档当前字节的纯函数（确定性优先）；§10 完整示例的数值经测试逐项钉死。
+- **The protocol** defines how to embed directed-acyclic-graph (DAG) structure
+  metadata in standard Markdown via HTML comments (nodes / edges / state
+  machine). Rendering is transparent, parsing is deterministic, and there are
+  zero platform dependencies. Spec: Lodestone Protocol (MD-DAG) v1.3 Final.
+- **This repository** is the authoritative Rust reference parser plus a Golden
+  Fixture test suite. The parse output is a pure function of the document's
+  current bytes (determinism first); the figures of the spec's §10 worked
+  example are pinned assertion-by-assertion.
 
-## 快速开始
+## Quick start
 
 ```bash
 cargo build --release
-target/release/mddag tests/fixtures/10_example.md          # §8 契约 JSON
-target/release/mddag --body concl-01 tests/fixtures/10_example.md   # L2 定点正文
-target/release/mddag --projection tests/fixtures/10_example.md      # 附录 A 边投影标签
-target/release/mddag --review tests/fixtures/10_example.md          # 分歧域 + 警告概览
+target/release/mddag tests/fixtures/10_example.md                       # §8 contract JSON
+target/release/mddag --body concl-01 tests/fixtures/10_example.md       # L2 targeted body text
+target/release/mddag --projection tests/fixtures/10_example.md          # appendix-A edge labels
+target/release/mddag --review tests/fixtures/10_example.md              # disputes + warning summary
 ```
 
-库调用：
+As a library:
 
 ```rust
 let result = mddag::parse(&markdown_text);
-// L1 骨架：result.nodes / result.edges / result.diagnostics / result.graph
-// L2 定点正文：mddag::body_text(&markdown_text, "concl-01")
-// 附录 A 投影：mddag::projection::project(&result) / mddag::projection::review(&result)
+// L1 skeleton: result.nodes / result.edges / result.diagnostics / result.graph
+// L2 targeted body: mddag::body_text(&markdown_text, "concl-01")
+// Appendix-A projection: mddag::projection::project(&result) / mddag::projection::review(&result)
 ```
 
-## 三级加载（消费方原生读取模式）
+## Three-level loading (the protocol's native read mode)
 
-| 级 | 内容 | 用途 |
+| Level | Content | Typical use |
 |---|---|---|
-| L1 骨架 | 节点表 + 规范化边集合 + 诊断 | 重建全局认知（本次输出即 L1） |
-| L2 定点正文 | 按 `body_start` / `body_end` 行号读取 | 回答具体问题、追溯依赖链 |
-| L3 全文 | 文档全部字节 | 查全率任务（审查 / 迁移 / 审计） |
+| L1 skeleton | node table + normalized edge set + diagnostics | rebuild global awareness, plan reads |
+| L2 targeted body | read one node by `body_start` / `body_end` | answer a specific question, trace a chain |
+| L3 full text | all bytes of the document | recall-complete tasks (audit / migration) |
 
-## 测试
+## Tests
 
 ```bash
-cargo test                        # 全量：单元 + Golden Fixture + 确定性断言
-UPDATE_GOLDEN=1 cargo test        # 重新生成期望快照（须人工核对，见 MANIFEST.md）
-cargo clippy --all-targets        # 验收门槛：0 warnings
-cargo run --release --example bench -- 5000   # 性能体检（非 CI 门槛）
+cargo test                        # unit + Golden Fixture + determinism assertions
+UPDATE_GOLDEN=1 cargo test        # regenerate expected snapshots (review by hand)
+cargo clippy --all-targets -- -D warnings   # gate: warnings denied
+cargo run --release --example bench -- 5000 # coarse perf check (not a CI gate)
 ```
 
-### 验收状态（当前实测）
+### Verification status (measured 2026-09-02)
 
-| 门槛 | 实测 | 验证位置 |
+| Gate | Measured | Verified by |
 |---|---|---|
-| `cargo test` | ✅ 20 passed（15 单元 + 3 Golden + 2 P1 集成） | CI / 本地 |
-| `cargo clippy --all-targets` | ✅ 0 warnings | CI / 本地 |
-| §10 黄金基准 | ✅ chars 12/74/23/11/3，区间 5–5/9–15/19–19/23–23/27–27，全局图为空，逐项断言 | `tests/golden.rs::spec_10_example_values` |
-| 解析确定性 | ✅ 同输入两次解析输出逐字节一致 | `tests/golden.rs::parse_is_deterministic` |
-| 错误/警告码覆盖 | ✅ §11 全部 14 码（22 组 Fixture 一一对应） | `tests/fixtures/MANIFEST.md` |
-| L1/L2 加载语义 | ✅ `body_text()` 与派生字段逐字符一致（含围栏/空正文） | `tests/p1.rs` |
+| `cargo test` | ✅ 23 passed (15 unit + 6 Golden + 2 P1 integration) | CI / local |
+| `cargo clippy --all-targets -- -D warnings` | ✅ 0 warnings | CI / local |
+| §10 golden baseline | ✅ chars 12/74/23/11/3, ranges 5–5/9–15/19–19/23–23/27–27, empty global graph | `tests/golden.rs::spec_10_example_values` |
+| parse determinism | ✅ two parses of one input, byte-identical output | `tests/golden.rs::parse_is_deterministic` |
+| diagnostic code coverage | ✅ all 14 codes of §11 (25 fixtures, one-to-one) | `tests/fixtures/MANIFEST.md` |
+| L1/L2 loading semantics | ✅ `body_text()` matches derived fields char-for-char (fences, empty bodies) | `tests/p1.rs` |
 
-> 状态以 2026-09-02 P2 实测为准；CI 徽章反映 push 后最新结果。每次合并前须全绿 + 0 warning（DNA 防腐化铁律）。
+## Project governance
 
-## 项目治理
+The repository grows under the [phyt-DNA](https://github.com/Jasonmilk/phyt-DNA)
+methodology; repository docs are written in Chinese and code comments in
+English:
 
-本仓库以 [phyt-DNA](https://github.com/Jasonmilk/phyt-DNA) 方法论自生长：
-
-- `docs/VISION.md` — 愿景与原子原则、哲学七律（逻辑闭环 / 极致复用 / 极致解耦 / 按需获取 / 按需加载 / 物理实时优先 / 确定性优先）
-- `docs/DNA.md` — 不可变原则与项目特有铁律
-- `docs/RNA.md` — 三层加载协议与 AI 协作铁律
-- `docs/PLAN.md` — 当前生长阶段导航牌（新会话必读）
-- `docs/decisions/` — ADR 决策记录（ADR-0001：Rust + comrak 选型）
+- `docs/VISION.md` — vision, atomic principles, and the seven philosophies
+  (closed loop / maximal reuse / maximal decoupling / fetch on demand / load
+  on demand / physical-time freshness / determinism first)
+- `docs/DNA.md` — immutable principles and project-specific iron rules
+- `docs/RNA.md` — three-layer loading protocol and AI collaboration rules
+- `docs/PLAN.md` — growth-stage navigator (read first in a new session)
+- `docs/decisions/` — ADRs (ADR-0001: Rust + comrak; ADR-0002: consistency
+  corpus & performance strategy)
 
 ## License
 
-Apache-2.0
+MIT

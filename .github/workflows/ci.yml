@@ -15,4 +15,7 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo test
+      # DNA anti-corruption rule (execution layer): warnings are denied.
       - run: cargo clippy --all-targets -- -D warnings
+      # The crate must always package cleanly (release gate).
+      - run: cargo publish --dry-run
