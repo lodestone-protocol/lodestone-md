@@ -5,6 +5,19 @@
 
 ---
 
+### 2026-09-02 P2 收官 + 拓扑拆分 + 协议 v1.3.0 发布
+
+- **事件**：Lodestone Protocol 完成协议仓/实现仓拆分——`lodestone-spec`（规范权威 + 14 码注册表 + 25 组 Golden Fixture，Apache-2.0）建仓并打 tag `v1.3.0`（导入自本仓 CI 全绿快照 3156199）；本仓（MIT）删除本地 fixtures，改为 submodule 引用，23 测试经 submodule 语料全绿；双语 README + "Implements Lodestone Protocol v1.3.0" 声明就位。
+- **关键决策**：
+  - 协议发布形态 = spec 仓 tag + GitHub Release（非 crates.io）；crates.io 全面推迟至第三方需求出现（ADR-0003）；
+  - §8.1 title 附加字段许可补丁在 spec 仓建仓时钉死（spec 仓 ADR-0001）；
+  - PR guard：CI 拒绝改动 vendor/lodestone-spec（防语料漂移）。
+- **方法论闭环**：PLAN 流转（P2 → P3）+ GROWTH 记录 + ADR-0003 关联
+- **健康度**：23 tests passed（经 submodule 语料），clippy 0 warnings；语料与快照字节一致
+- **版本**：md `5f2cc24`；spec `4c46138` / tag `v1.3.0`
+
+---
+
 ### 2026-09-02 P1 消费端与投影收官
 
 - **事件**：三级加载语义从协议文本变为可执行 API 与命令行面。投影模块（附录 A 六标签）、L2 定点正文 `body_text()`、CLI 五模式（全量 / --skeleton / --body / --projection / --review）、人类审查面（分歧域 + 警告概览）落地，§10 黄金基准在投影层复用验证（concl→exp pending、counter→concl nascent、plan→old-note dangling）。
