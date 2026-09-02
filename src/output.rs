@@ -1,7 +1,10 @@
-//! 输出契约（规范 §8.1–§8.4）。DNA 防腐化铁律 2：契约冻结，扩展 Append-Only。
+//! Output contract (spec §8.1–§8.4). Anti-corruption rule 2: contract is
+//! frozen; extensions are append-only.
 //!
-//! `NodeEntry.title` 为实现扩展字段（Append-Only，置于契约字段之后）：
-//! 无效节点须"保留为占位（含标题）"，且 title 是 L1 骨架的第一发现锚点。
+//! `NodeEntry.title` is an append-only implementation extension placed after
+//! the spec fields: invalid nodes must stay visible as placeholders (with
+//! their heading), and the title is the first discovery anchor of the L1
+//! skeleton.
 
 use serde::Serialize;
 
@@ -9,7 +12,7 @@ use crate::diag::Diagnostic;
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 pub struct DocMetaOut {
-    /// 文档级声明的 version；未声明时为 null。
+    /// Declared document version; null when not declared.
     pub version: Option<String>,
 }
 
@@ -22,7 +25,7 @@ pub struct NodeEntry {
     pub chars: usize,
     pub body_start: Option<usize>,
     pub body_end: Option<usize>,
-    /// 实现扩展（Append-Only）：节点标题文本。
+    /// Implementation extension (append-only): heading text.
     pub title: String,
 }
 

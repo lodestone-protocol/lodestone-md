@@ -1,8 +1,8 @@
-//! 节点标识（规范 §4.2）：slug 派生与 id 字符合法性。
+//! Node identity (spec §4.2): slug derivation and declared-id legality.
 
 pub const MAX_ID_LEN: usize = 64;
 
-/// id 字符集为 `[a-z0-9_-]`，长度 ≤ 64。
+/// The id charset is `[a-z0-9_-]`, length ≤ 64.
 pub fn is_valid_declared_id(id: &str) -> bool {
     !id.is_empty()
         && id.chars().count() <= MAX_ID_LEN
@@ -11,10 +11,11 @@ pub fn is_valid_declared_id(id: &str) -> bool {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-')
 }
 
-/// 由标题文本按 §4.2 确定性算法派生 slug。
+/// Derives a slug from the heading text by the deterministic algorithm of §4.2.
 ///
-/// 小写映射：以 `char::to_lowercase()`（全小写映射）取首码位近似
-/// Unicode 15.1 Simple Lowercase Mapping（ADR-0001，偏差个案以测试收敛）。
+/// Lowercasing approximates Unicode 15.1 Simple Lowercase Mapping by taking
+/// the first code point of `char::to_lowercase()` (full mapping); divergent
+/// cases are pinned down by tests (ADR-0001).
 pub fn slug(title: &str) -> String {
     let mut out = String::new();
     for ch in title.chars() {
@@ -25,7 +26,7 @@ pub fn slug(title: &str) -> String {
             out.push('-');
         }
     }
-    // 连续 `-` 压缩为单个
+    // Collapse runs of `-` into a single one
     let mut collapsed = String::with_capacity(out.len());
     let mut prev_dash = false;
     for c in out.chars() {
@@ -39,7 +40,7 @@ pub fn slug(title: &str) -> String {
             prev_dash = false;
         }
     }
-    // 去除首尾 `-`，超过 64 字符截断
+    // Trim leading/trailing `-`; truncate past 64 chars
     collapsed
         .trim_matches('-')
         .chars()
@@ -68,7 +69,7 @@ mod tests {
 
     #[test]
     fn turkish_dotted_i() {
-        // U+0130 的 Simple Lowercase Mapping 为 U+0069
+        // U+0130 Simple Lowercase Mapping is U+0069
         assert_eq!(slug("\u{0130}stanbul"), "istanbul");
     }
 

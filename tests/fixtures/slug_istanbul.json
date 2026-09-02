@@ -1,0 +1,23 @@
+{
+  "doc_meta": null,
+  "nodes": [
+    {
+      "id": "istanbul",
+      "status": "draft",
+      "valid": true,
+      "tags": [],
+      "chars": 3,
+      "body_start": 3,
+      "body_end": 3,
+      "title": "İstanbul"
+    }
+  ],
+  "edges": [],
+  "diagnostics": [],
+  "graph": {
+    "nodes": [
+      "istanbul"
+    ],
+    "edges": []
+  }
+}

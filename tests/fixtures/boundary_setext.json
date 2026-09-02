@@ -1,0 +1,31 @@
+{
+  "doc_meta": null,
+  "nodes": [
+    {
+      "id": "a",
+      "status": "draft",
+      "valid": true,
+      "tags": [],
+      "chars": 58,
+      "body_start": 3,
+      "body_end": 7,
+      "title": "Node A"
+    }
+  ],
+  "edges": [],
+  "diagnostics": [
+    {
+      "code": "W-REDUNDANT-META",
+      "level": "warning",
+      "node_id": null,
+      "edge": null,
+      "message": "redundant mddag comment at line 6 ignored"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      "a"
+    ],
+    "edges": []
+  }
+}

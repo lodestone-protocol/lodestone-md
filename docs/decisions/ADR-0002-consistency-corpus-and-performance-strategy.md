@@ -39,3 +39,26 @@ P2 目标有三：把 Golden Fixture 提升为可独立发布的跨实现一致�
 - **内容**：derive 作为 depend 的转置书写糖，实际误用率若偏高，v2.0 复查其存在价值。
 - **本仓库立场**：derive 与 depend 持久化格式均合法（§7.2），解析输出一律折叠为 depend 方向，因此**语料不因书写形式而异**——误用率影响的是作者体验而非解析正确性。建议 v2.0 收集真实文档中 `relation:"derive"` 的占比作为观测指标。
 - **状态**：观察中（无数据源，等待生态使用）。
+
+---
+
+## 六、审查备忘录（2026-09-02 外部审查决议归档）
+
+### 误报记录（P2 / P3 / P4 — 影子缝隙，无动作）
+
+| 报告项 | 声称 | 裁决 | 依据 |
+|---|---|---|---|
+| P2 文档级重复键"规范未授权" | 缝隙 | **误报** | §3.1 行为表 + §11 W-DOC-META 明文含"JSON 出现重复键"；MANIFEST 已引用 §3.1 |
+| P3 failure 含警告码"未授权" | 缝隙 | **误报** | §8.2 failure 示例值明文含 `"W-UPSTREAM-PENDING"`；contract.md §1.2 授权 |
+| P4 全局图 nodes 数组"未规范扩展" | 缝隙 | **误报** | §8.4 JSON 契约首字段即 `"nodes"`；contract.md §1.4 明文 |
+| P5 W-META-PLACEMENT vs W-REDUNDANT-META | 建议脚注 | **驳回** | §5.1 末句已隐含优先级；如无必要勿增实体 |
+
+### 吸收项（已执行，见 PLAN / fixtures）
+
+- **P1**：新增 `slug_istanbul` fixture，钉死 U+0130 → `id="istanbul"`（Simple Lowercase Mapping，无 U+0307）——单元测试是实现私有的，Golden Fixture 才是跨实现互操作锚点；
+- **setext**：新增 `boundary_setext` fixture，钉死 Setext H1 不构成节点边界（§4.1 只认 ATX）；
+- **空行间隔**：新增 `meta_blank_gap` fixture，钉死"标题后首个非空行"的位置规则跨空行生效（§5.1）。
+
+### 审查方法论备忘（对后续审查者的硬性要求）
+
+任何"规范-实现缝隙"判定，在做出之前 MUST 先交叉验证 `docs/spec/contract.md` 与 `tests/fixtures/MANIFEST.md`——二者是规范 §8 契约与 fixture 覆盖矩阵的仓库侧化身。本 ADR 记录的 P2/P3/P4 均因未读全三份文件而误报。判定流程：规范原文 → contract.md → MANIFEST.md → 实现，四者一致即非缝隙。

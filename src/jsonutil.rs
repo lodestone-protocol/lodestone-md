@@ -1,9 +1,14 @@
-//! JSON 重复键预扫描（规范 §5.2 / §3.1）。
+//! JSON duplicate-key pre-scan (spec §5.2 / §3.1).
 //!
-//! serde_json 等主流解析器对重复键静默保留末键，而协议钉死重复键必须报错
-//! （节点级 E-META-SYNTAX / 文档级 W-DOC-META），故在 serde 之前做流式预扫描。
-/// 语义：返回 Ok(()) 当输入是合法 JSON 且无对象内重复键；Err(()) 表示
-/// 重复键或非法 JSON（后者 serde_json 亦会拒绝，两路殊途同归于既定失败行为）。
+//! Mainstream parsers such as serde_json silently keep the last value of a
+//! duplicate key, but the protocol pins duplicate keys as an error (node-level
+//! E-META-SYNTAX / document-level W-DOC-META), so a streaming pre-scan runs
+//! before serde.
+//!
+//! Semantics: Ok(()) means the input is valid JSON with no in-object duplicate
+//! keys; Err(()) means a duplicate key or malformed JSON (the latter is also
+//! rejected by serde_json, so both paths converge on the pinned failure).
+
 #[allow(clippy::result_unit_err)]
 pub fn scan(body: &str) -> Result<(), ()> {
     let chars: Vec<char> = body.chars().collect();
@@ -89,9 +94,7 @@ impl<'a> P<'a> {
     fn number(&mut self) -> Result<(), ()> {
         let start = self.i;
         while let Some(ch) = self.peek() {
-            if ch.is_ascii_digit()
-                || matches!(ch, '-' | '+' | '.' | 'e' | 'E')
-            {
+            if ch.is_ascii_digit() || matches!(ch, '-' | '+' | '.' | 'e' | 'E') {
                 self.i += 1;
             } else {
                 break;

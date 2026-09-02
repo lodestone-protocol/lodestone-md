@@ -1,7 +1,9 @@
-//! 大文档解析基准（P2 T2）：合成 N 节点链式文档，测量单趟解析耗时与骨架规模。
+//! Large-document parse benchmark (P2 T2): builds a synthetic chain document
+//! of N nodes and times a single parse pass plus skeleton scale.
 //!
-//! 运行：`cargo run --release --example bench -- [nodes]`
-//! 默认 5000 节点。仅为粗粒度体检，非微基准（确定性优先，无需统计库）。
+//! Run with `cargo run --release --example bench -- [nodes]`, default 5000
+//! nodes. Coarse health check only, not a micro-benchmark (determinism first;
+//! no statistics library needed).
 
 use std::time::Instant;
 
@@ -11,8 +13,8 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or(5000);
 
-    // 合成：链式 depend 图（无环），节点交替 aligned/converged，
-    // 每节点含 tags + 30 字正文，文件约 (标题 + 注释 + 正文) × N。
+    // Synthetic acyclic depend chain, alternating aligned/converged, each node
+    // with tags plus ~30 CJK chars of body (~(heading + comment + body) x N).
     let mut doc = String::from("<!-- mddag: {\"version\":\"1.3\"} -->\n\n");
     for i in 0..n {
         let status = if i % 2 == 0 { "aligned" } else { "converged" };
@@ -31,7 +33,8 @@ fn main() {
         doc.push_str("正文内容若干字用于度量。\n\n");
     }
 
-    // 预热 + 计时（两次，报告第二次——取确定性路径的典型耗时）
+    // Warm up, then time (two runs, report the second — a typical duration of
+    // the deterministic path).
     let _ = mddag::parse(&doc);
     let t0 = Instant::now();
     let result = mddag::parse(&doc);
@@ -44,7 +47,8 @@ fn main() {
         result.edges.iter().filter(|e| e.effective).count(),
         result.diagnostics.len()
     );
-    // 链中偶数位 aligned 节点指向奇数位 converged 上游 → 对齐欠账警告数 ≈ n/2
+    // Even-numbered aligned nodes point at odd-numbered converged upstreams,
+    // so the alignment-debt warning count is ~n/2
     println!(
         "W-UPSTREAM-PENDING: {}",
         result

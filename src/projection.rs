@@ -1,7 +1,9 @@
-//! 视图投影（规范附录 A，非规范性）：边状态标签与人类审查面。
+//! View projection (spec appendix A, non-normative): edge-state labels and
+//! the human review surface.
 //!
-//! 投影是消费方可从（status、规范化边集合、诊断列表）确定性计算的只读视图。
-//! 协议仅规范事实，不规范呈现。
+//! A projection is a read-only view deterministically computed from (status,
+//! normalized edge set, diagnostics). The protocol specifies facts, not
+//! presentation.
 
 use serde::Serialize;
 
@@ -40,9 +42,11 @@ pub struct ProjectedEdge {
     pub label: &'static str,
 }
 
-/// 附录 A 条件表。判定优先级（互斥分类）：
-/// dangling（E-REF-NOT-FOUND）> cyclic（循环边全集）> redundant（携带折叠警告）
-/// > coherent（生效）> pending（恰一端 aligned）> nascent（双端非 aligned）。
+/// Appendix A condition table. Priority of the mutually exclusive
+/// classification:
+/// dangling (E-REF-NOT-FOUND) > cyclic (cycle edge set) > redundant (folded
+/// with a warning) > coherent (effective) > pending (exactly one end aligned)
+/// > nascent (neither end aligned).
 pub fn label(edge: &EdgeEntry, result: &ParseResult) -> Label {
     let edge_key = format!("{} -> {}", edge.from, edge.to);
     let carries = |code: &str| {
@@ -63,7 +67,8 @@ pub fn label(edge: &EdgeEntry, result: &ParseResult) -> Label {
     if edge.effective {
         return Label::Coherent;
     }
-    // 引用不可解析的边已在 dangling 分支返回；此处端点均可解析。
+    // Edges with unresolvable references already returned as dangling above;
+    // here both endpoints resolve.
     let aligned = |id: &str| {
         result
             .nodes
@@ -76,7 +81,7 @@ pub fn label(edge: &EdgeEntry, result: &ParseResult) -> Label {
     }
 }
 
-/// 全部规范化边的投影视图（文档序）。
+/// Projection of every normalized edge (document order).
 pub fn project(result: &ParseResult) -> Vec<ProjectedEdge> {
     result
         .edges
@@ -90,21 +95,22 @@ pub fn project(result: &ParseResult) -> Vec<ProjectedEdge> {
         .collect()
 }
 
-/// 人类审查面（§1 消费方角色：检视对齐状态、警告列表与分歧域）。
+/// Human review surface (spec §1 consumer role: inspect alignment state,
+/// warnings and dispute domains).
 #[derive(Serialize, Clone, Debug, Default)]
 pub struct Review {
-    /// 声明 aligned 的节点数 / 节点总数
+    /// Declared-aligned nodes / total nodes
     pub aligned_nodes: usize,
     pub total_nodes: usize,
-    /// 分歧域：全部 refute 规范化边（端点 id + 各自 status）
+    /// Dispute domains: every refute normalized edge (endpoint id + status)
     pub disputes: Vec<Dispute>,
-    /// 悬挂边（dangling）：引用不可解析
+    /// Dangling edges (unresolvable references)
     pub dangling: Vec<String>,
-    /// 环边（cyclic）
+    /// Cycle edges
     pub cyclic: Vec<String>,
-    /// 对齐欠账（W-UPSTREAM-PENDING）
+    /// Alignment debt (W-UPSTREAM-PENDING)
     pub upstream_pending: Vec<String>,
-    /// 其余警告（W-*）概览：码 → 出现次数
+    /// Remaining warnings (W-*): code → occurrences
     pub other_warnings: Vec<(String, usize)>,
 }
 
@@ -116,7 +122,8 @@ pub struct Dispute {
     pub to_status: String,
 }
 
-/// 生成分歧域与审查摘要。输入须为同一趟解析结果（单一管线）。
+/// Builds the dispute-domain and review summary. Input must come from one
+/// single parse pass (single pipeline).
 pub fn review(result: &ParseResult) -> Review {
     let status_of = |id: &str| -> String {
         result
@@ -183,11 +190,11 @@ mod tests {
                 .map(|e| e.label)
                 .unwrap()
         };
-        // concl-01(converged) → exp-01(aligned)：恰一端 aligned → pending
+        // concl-01 (converged) -> exp-01 (aligned): exactly one aligned → pending
         assert_eq!(get("concl-01", "exp-01"), "pending");
-        // counter-01(draft) → concl-01(converged)：双端非 aligned → nascent
+        // counter-01 (draft) -> concl-01 (converged): neither aligned → nascent
         assert_eq!(get("counter-01", "concl-01"), "nascent");
-        // plan-01 → old-note：引用不可解析 → dangling
+        // plan-01 -> old-note: unresolvable reference → dangling
         assert_eq!(get("plan-01", "old-note"), "dangling");
     }
 
@@ -196,10 +203,7 @@ mod tests {
         let input = include_str!("../tests/fixtures/cycle_global.md");
         let r = parse(input);
         let p = project(&r);
-        let coherent = p
-            .iter()
-            .filter(|e| e.label == "coherent")
-            .count();
+        let coherent = p.iter().filter(|e| e.label == "coherent").count();
         let cyclic = p.iter().filter(|e| e.label == "cyclic").count();
         assert_eq!(coherent, 1); // cc -> cd
         assert_eq!(cyclic, 3);
@@ -214,13 +218,13 @@ mod tests {
         let input = include_str!("../tests/fixtures/edges_derive_fold.md");
         let r = parse(input);
         let p = project(&r);
-        // 折叠后的幸存边携带 W-REDUNDANT-EDGE → redundant
+        // The surviving folded edge carries W-REDUNDANT-EDGE → redundant
         let d = p
             .iter()
             .find(|e| e.from == "der2" && e.to == "der1")
             .unwrap();
         assert_eq!(d.label, "redundant");
-        // base -> der1 双端 aligned 且生效 → coherent
+        // base -> der1: both aligned and effective → coherent
         let b = p
             .iter()
             .find(|e| e.from == "base" && e.to == "der1")

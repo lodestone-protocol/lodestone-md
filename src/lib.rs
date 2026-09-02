@@ -1,7 +1,8 @@
-//! Lodestone Protocol (MD-DAG) v1.3 Final 参考解析器。
+//! Lodestone Protocol (MD-DAG) v1.3 Final reference parser.
 //!
-//! 单一解析管线（DNA 特有铁律 4）：所有输出出自 [`parse`] 一趟结果（规范 §8）。
-//! 解析确定性：输出是文档当前字节的纯函数，无全局可变状态。
+//! Single pipeline (DNA-specific rule 4): every output comes from one pass of
+//! [`parse`] (spec §8). Parse determinism: the output is a pure function of
+//! the document's current bytes; no global mutable state.
 
 pub mod body;
 pub mod diag;
@@ -23,9 +24,9 @@ use scanner::Heading;
 
 use nodemeta::{MetaOutcome, STATUS_DRAFT};
 
-/// 解析一个 Lodestone (MD-DAG) 文档。
+/// Parses one Lodestone (MD-DAG) document.
 pub fn parse(input: &str) -> ParseResult {
-    // BOM 剥离（§3.1：文档级元数据位置在 BOM 之后）。
+    // Strip the BOM (§3.1: document metadata sits after the BOM).
     let text = input.strip_prefix('\u{FEFF}').unwrap_or(input);
     let lines = lines::split_lines(text);
     let scan = scanner::scan(text);
@@ -33,17 +34,19 @@ pub fn parse(input: &str) -> ParseResult {
 
     let mut diagnostics: Vec<Diagnostic> = Vec::new();
 
-    // §8 步骤 2：文档级元数据（§3.1 行为钉死）。
+    // §8 step 2: document-level metadata (§3.1 pinned behaviors).
     let doc_meta = docmeta::extract(lines.first().map(|s| s.as_str()), &mut diagnostics);
 
-    // 边界：顶层 ATX 一级标题且零缩进（§4.1 收窄：1–3 空格缩进视为正文）。
+    // Boundaries: top-level ATX level-1 headings with zero indent (§4.1
+    // narrowing: 1–3-space indented headings are body text).
     let boundaries: Vec<&Heading> = scan
         .headings
         .iter()
         .filter(|h| h.col == 1)
         .collect();
 
-    // §3.2 节点 0 扫描：MUST NOT 携带节点元数据，MUST NOT 被引用；仅检测 W-META-PLACEMENT。
+    // §3.2 node-0 scan: MUST NOT carry node metadata, MUST NOT be referenced;
+    // scanned only to detect W-META-PLACEMENT.
     let node0_end = boundaries
         .first()
         .map(|h| h.line - 1)
@@ -52,7 +55,8 @@ pub fn parse(input: &str) -> ParseResult {
         if in_code(idx) {
             continue;
         }
-        // 首行若为文档级元数据形态，归 §3.1 管辖，不在节点 0 重复告警。
+        // A first line shaped like document-level metadata belongs to §3.1;
+        // do not double-warn it here.
         if idx == 1 && lines[0].starts_with(docmeta::PREFIX) {
             continue;
         }
@@ -83,7 +87,8 @@ pub fn parse(input: &str) -> ParseResult {
 
     let mut works: Vec<NodeWork> = Vec::new();
 
-    // §8 步骤 3–5：节点元数据三层校验、E-DUP-ID 前置、派生字段。
+    // §8 steps 3–5: node metadata three-layer validation, E-DUP-ID
+    // prerequisite, derived fields.
     for (i, h) in boundaries.iter().enumerate() {
         let title_line = h.line;
         let end_line = if i + 1 < boundaries.len() {
@@ -166,7 +171,7 @@ pub fn parse(input: &str) -> ParseResult {
             }
         }
 
-        // §4.2：标题未采用 NFC 归一化形态 → W-NFC-VIOLATION（SHOULD）。
+        // §4.2: title not in NFC form → W-NFC-VIOLATION (SHOULD).
         let nfc: String = h.text.chars().nfc().collect();
         if nfc != h.text {
             diagnostics.push(Diagnostic::warning(
@@ -180,7 +185,8 @@ pub fn parse(input: &str) -> ParseResult {
         works.push(work);
     }
 
-    // §8 步骤 4：E-DUP-ID——同 id 的全部有效节点判无效；无效节点不参与检测，不级联。
+    // §8 step 4: E-DUP-ID — every valid node sharing an id becomes invalid;
+    // invalid nodes do not participate in detection, so no cascade.
     {
         let mut by_id: std::collections::BTreeMap<String, Vec<usize>> =
             std::collections::BTreeMap::new();
@@ -206,7 +212,7 @@ pub fn parse(input: &str) -> ParseResult {
         }
     }
 
-    // §8 步骤 5：派生字段（对有效与无效节点统一适用）。
+    // §8 step 5: derived fields (uniform for valid and invalid nodes).
     let nodes: Vec<NodeEntry> = works
         .iter()
         .map(|w| {
@@ -225,7 +231,8 @@ pub fn parse(input: &str) -> ParseResult {
         })
         .collect();
 
-    // §8 步骤 6–9：边规范化、引用校验、软校验、生效判定。
+    // §8 steps 6–9: edge normalization, reference validation, soft checks,
+    // effectiveness.
     let valid_pairs: Vec<(String, String)> = works
         .iter()
         .filter(|w| w.valid)
@@ -252,7 +259,7 @@ pub fn parse(input: &str) -> ParseResult {
         edges: graph_edge_list,
     };
 
-    // §8 步骤 10：输出。
+    // §8 step 10: output.
     ParseResult {
         doc_meta,
         nodes,
@@ -262,15 +269,17 @@ pub fn parse(input: &str) -> ParseResult {
     }
 }
 
-/// 供消费方使用的状态常量再导出。
+/// Status constants re-exported for consumers.
 pub mod states {
     pub use crate::nodemeta::{STATUS_ALIGNED, STATUS_CONVERGED, STATUS_DRAFT};
 }
 
-/// L2 定点正文（§9 三级加载）：按节点 id 返回正文文本。
+/// L2 targeted body text (§9 three-level loading): returns the body of the
+/// node identified by `id`.
 ///
-/// 文本与派生字段一致：正文区间内各行以 U+000A 连接（不含末行换行）。
-/// id 不存在或正文为空时返回 None 之外，仍返回 Some("")（空正文是合法状态）。
+/// The text matches the derived fields: body lines joined by U+000A (no
+/// trailing newline). An empty body is a legal state and yields Some("");
+/// `BodyError::NodeNotFound` is returned when no node carries `id`.
 pub fn body_text(input: &str, id: &str) -> Result<String, BodyError> {
     let result = parse(input);
     let node = result

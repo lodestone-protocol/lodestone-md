@@ -1,6 +1,7 @@
-//! 节点元数据提取与三层校验（规范 §5）。
+//! Node metadata extraction and three-layer validation (spec §5).
 //!
-//! 层序：形态层（位置/前缀/单行/SUFFIX）→ JSON 层（含重复键）→ 字段层（降级）。
+//! Layer order: form (position/prefix/single-line/SUFFIX) → JSON (incl.
+//! duplicate keys) → fields (degradation).
 
 use crate::diag::{self, Diagnostic};
 use crate::ids;
@@ -16,26 +17,28 @@ pub const STATUS_ALIGNED: &str = "aligned";
 
 pub const RELATIONS: [&str; 4] = ["depend", "derive", "support", "refute"];
 
-/// 字段层校验通过后的字段集合。
+/// Field set after the field layer validates (with degradation applied).
 pub struct Fields {
-    /// None = 未声明；Some(Ok) = 合法声明；Some(Err) = 声明违反字符集/长度（§5.3：视为无 id）
+    /// None = undeclared; Some(Ok) = legal; Some(Err) = declared id violates
+    /// the charset/length rules (§5.3: treated as missing)
     pub id: Option<Result<String, ()>>,
     pub status: String,
-    /// (to, relation) 声明出边（形态合法者）
+    /// Declared out-edges (to, relation) that passed the form check
     pub declared_edges: Vec<(String, String)>,
     pub tags: Vec<String>,
 }
 
 pub enum MetaOutcome {
-    /// 无元数据（含近似变体/位置靠后被拒）
+    /// No metadata (including near-prefix variants / misplaced positions)
     Absent,
-    /// 三层校验通过（可能带字段级降级）
+    /// All three layers passed (may carry field-level degradations)
     Parsed(Fields),
-    /// E-META-SYNTAX：节点无效
+    /// E-META-SYNTAX: the node is invalid
     Invalid,
 }
 
-/// 从节点区间 (title_line, end_line]（1-based，含端点）提取元数据。
+/// Extracts metadata from the node range (title_line, end_line] (1-based,
+/// inclusive end).
 pub fn extract(
     lines: &[String],
     title_line: usize,
@@ -60,9 +63,10 @@ pub fn extract(
         return MetaOutcome::Absent;
     }
 
-    // 采纳前提：首个 mddag 注释恰好位于标题行后第一个非空行。
+    // Adoption precondition: the first mddag comment sits exactly at the first
+    // non-empty line after the heading.
     if Some(md_lines[0]) != first_non_empty {
-        // 位置靠后 / 缩进 / 变体：节点无元数据。
+        // Misplaced (later / indented / variant): the node has no metadata.
         for &i in &md_lines {
             diag.push(Diagnostic::warning(
                 diag::W_META_PLACEMENT,
@@ -79,7 +83,8 @@ pub fn extract(
 
     let cand = &lines[md_lines[0] - 1];
     if !cand.starts_with(PREFIX) {
-        // 近似前缀变体（缺空格）或缩进形态：W-META-PLACEMENT，无元数据。
+        // Near-prefix variant (missing spaces) or indented form:
+        // W-META-PLACEMENT, no metadata.
         diag.push(Diagnostic::warning(
             diag::W_META_PLACEMENT,
             None,
@@ -103,7 +108,8 @@ pub fn extract(
         return MetaOutcome::Absent;
     }
     if !cand.ends_with(SUFFIX) {
-        // 顶格以精确前缀开始但未以 --> 结尾（跨行或未闭合）：E-META-SYNTAX。
+        // Top-aligned with the exact prefix but not closed by "-->"
+        // (multi-line or unclosed): E-META-SYNTAX.
         diag.push(Diagnostic::error(
             diag::E_META_SYNTAX,
             None,
@@ -116,7 +122,7 @@ pub fn extract(
         return MetaOutcome::Invalid;
     }
 
-    // 采纳。注释体 = 两定界符之间子串。
+    // Adopted. The body is the substring between the two delimiters.
     let body = &cand[PREFIX.len()..cand.len() - SUFFIX.len()];
     if body.contains(SUFFIX) {
         diag.push(Diagnostic::error(
@@ -128,7 +134,8 @@ pub fn extract(
         return MetaOutcome::Invalid;
     }
 
-    // 采纳后的后续 mddag 注释：忽略并报告 W-REDUNDANT-META。
+    // Later mddag comments after adoption: ignored, reported as
+    // W-REDUNDANT-META.
     for &i in md_lines.iter().skip(1) {
         diag.push(Diagnostic::warning(
             diag::W_REDUNDANT_META,
@@ -144,7 +151,7 @@ pub fn extract(
     }
 }
 
-/// JSON 层 + 字段层。返回 None 表示 JSON 层失败（节点无效）。
+/// JSON layer + field layer. None means the JSON layer failed (node invalid).
 fn parse_fields(body: &str, diag: &mut Vec<Diagnostic>) -> Option<Fields> {
     if jsonutil::duplicate_keys(body) {
         diag.push(Diagnostic::error(
@@ -180,7 +187,7 @@ fn parse_fields(body: &str, diag: &mut Vec<Diagnostic>) -> Option<Fields> {
         }
     };
 
-    // id 先行解析，供后续字段诊断携带 node_id。
+    // Parse id first so later field diagnostics can carry the node_id.
     let id: Option<Result<String, ()>> = match obj.get("id") {
         None => None,
         Some(serde_json::Value::String(s)) => {
@@ -199,7 +206,7 @@ fn parse_fields(body: &str, diag: &mut Vec<Diagnostic>) -> Option<Fields> {
 
     let field_diag = |message: String| Diagnostic::error(diag::E_META_FIELD, node_id.clone(), None, message);
 
-    // status：非法值回退 draft。
+    // status: illegal values fall back to draft.
     let status = match obj.get("status") {
         None => STATUS_DRAFT.to_string(),
         Some(serde_json::Value::String(s))
@@ -213,7 +220,7 @@ fn parse_fields(body: &str, diag: &mut Vec<Diagnostic>) -> Option<Fields> {
         }
     };
 
-    // edges：非法条目剔除，其余保留。
+    // edges: illegal entries are dropped, the rest are kept.
     let mut declared_edges = Vec::new();
     match obj.get("edges") {
         None => {}
@@ -242,7 +249,7 @@ fn parse_fields(body: &str, diag: &mut Vec<Diagnostic>) -> Option<Fields> {
         Some(_) => diag.push(field_diag("\"edges\" is not an array; field ignored".to_string())),
     }
 
-    // tags：非字符串数组则忽略。
+    // tags: ignored unless an array of strings.
     let tags = match obj.get("tags") {
         None => Vec::new(),
         Some(serde_json::Value::Array(a)) => {
@@ -265,8 +272,9 @@ fn parse_fields(body: &str, diag: &mut Vec<Diagnostic>) -> Option<Fields> {
         }
     };
 
-    // updated：信息性字段，不参与协议层计算，忽略内容。
-    // 未知字段：忽略。
+    // updated: informational field, takes no part in protocol-level
+    // computation; its content is ignored.
+    // Unknown fields: ignored.
 
     Some(Fields {
         id,

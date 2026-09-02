@@ -1,6 +1,7 @@
-//! 诊断码常量（规范 §11 一一对应）与诊断条目结构（§8.3）。
+//! Diagnostic code constants (spec §11, one-to-one) and the entry shape (§8.3).
 //!
-//! DNA 特有铁律 2/7：警告绝不阻断解析；错误码以常量定义，禁止字符串散落。
+//! DNA rules 2/7: warnings never block parsing; codes are constants, never
+//! bare strings scattered through the codebase.
 
 use serde::Serialize;
 

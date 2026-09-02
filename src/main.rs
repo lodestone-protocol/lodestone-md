@@ -1,10 +1,10 @@
-//! CLI（§9 三级加载的命令行面）：
+//! CLI (the command-line face of §9 three-level loading):
 //!
-//! - `mddag <file.md | ->`            全量输出（§8 契约 JSON，默认）
-//! - `mddag --skeleton <file.md | ->`  L1 骨架（节点表 + 边 + 诊断 + 图）
-//! - `mddag --body <id> <file.md | ->` L2 定点正文（纯文本）
-//! - `mddag --projection <file.md | ->` 附录 A 边投影标签
-//! - `mddag --review <file.md | ->`    人类审查面（分歧域 + 警告概览）
+//! - `mddag <file.md | ->`            full output (§8 contract JSON, default)
+//! - `mddag --skeleton <file.md | ->`  L1 skeleton (node table + edges + diagnostics + graph)
+//! - `mddag --body <id> <file.md | ->` L2 targeted body text (plain text)
+//! - `mddag --projection <file.md | ->` appendix A edge projection labels
+//! - `mddag --review <file.md | ->`    human review surface (disputes + warning summary)
 
 use std::env;
 use std::fs;
@@ -78,7 +78,8 @@ fn main() {
             emit(&result);
         }
         Mode::Skeleton => {
-            // L1 = 节点表 + 规范化边集合 + 诊断（+ 可 derives 的全局图）。
+            // L1 = node table + normalized edge set + diagnostics (plus the
+            // derivable global graph).
             let result = mddag::parse(&input);
             emit(&serde_json::json!({
                 "nodes": result.nodes,

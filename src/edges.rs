@@ -1,4 +1,6 @@
-//! 边管线（规范 §6 / §7 / §8 步骤 6–9）：规范化、折叠、引用校验、软校验、生效判定与全局环检测。
+//! Edge pipeline (spec §6 / §7 / §8 steps 6–9): normalization, folding,
+//! reference validation, soft checks, effectiveness and global cycle
+//! detection.
 
 use std::collections::HashMap;
 
@@ -9,7 +11,7 @@ use crate::output::{EdgeEntry, GraphEdge};
 pub const RELATION_DEPEND: &str = "depend";
 pub const RELATION_DERIVE: &str = "derive";
 
-/// 一条声明边（来自有效节点）。
+/// A declared edge (originating from a valid node).
 pub struct DeclaredEdge {
     pub from_id: String,
     pub to: String,
@@ -27,9 +29,9 @@ fn edge_str(from: &str, to: &str) -> String {
     format!("{} -> {}", from, to)
 }
 
-/// 返回 (规范化边集合条目, 全局图生效边)。
+/// Returns (normalized edge-set entries, effective global-graph edges).
 pub fn process(
-    valid_nodes: &[(String, String)], // (id, status)，文档序
+    valid_nodes: &[(String, String)], // (id, status), document order
     declared: &[DeclaredEdge],
     diag: &mut Vec<Diagnostic>,
 ) -> (Vec<EdgeEntry>, Vec<GraphEdge>) {
@@ -40,7 +42,9 @@ pub fn process(
             .map(|(_, s)| s.as_str())
     };
 
-    // §7.2 规范化：derive 转置为 depend；三元组相同的折叠为一条，每多出一条报 W-REDUNDANT-EDGE。
+    // §7.2 normalization: derive transposes to depend; identical
+    // (from, to, relation) triples fold into one, each extra triple reporting
+    // W-REDUNDANT-EDGE.
     let mut norm: Vec<Norm> = Vec::new();
     for d in declared {
         let (from, to, relation) = if d.relation == RELATION_DERIVE {
@@ -60,8 +64,10 @@ pub fn process(
             ));
             continue;
         }
-        // 引用校验（§8 步骤 7）：规范化边的两端均须解析为有效节点。
-        // derive 转置后，声明目标成为规范化源端，端点校验等价覆盖声明的引用。
+        // Reference validation (§8 step 7): both ends of a normalized edge
+        // must resolve to valid nodes. After derive transposition the declared
+        // target becomes the normalized source, so endpoint checking covers
+        // the declared reference.
         let ref_ok = status_of(&from).is_some() && status_of(&to).is_some();
         norm.push(Norm {
             from,
@@ -71,7 +77,7 @@ pub fn process(
         });
     }
 
-    // §8 步骤 7：E-REF-NOT-FOUND。
+    // §8 step 7: E-REF-NOT-FOUND.
     for e in &norm {
         if !e.ref_ok {
             diag.push(Diagnostic::error(
@@ -83,7 +89,8 @@ pub fn process(
         }
     }
 
-    // §7.3 软环检测（SHOULD）：规范化声明边集合（引用可解析者，不问对齐状态）。
+    // §7.3 soft cycle detection (SHOULD): on the declared normalized edge set
+    // (reference-resolvable only, regardless of alignment).
     let declared_pairs: Vec<(&str, &str)> = norm
         .iter()
         .filter(|e| e.ref_ok)
@@ -103,7 +110,8 @@ pub fn process(
         ));
     }
 
-    // §6 约束 3：aligned 节点存在非 aligned 上游（规范化 depend 出边）。
+    // §6 constraint 3: an aligned node has a non-aligned upstream (normalized
+    // depend out-edges).
     for e in &norm {
         if e.ref_ok
             && e.relation == RELATION_DEPEND
@@ -119,8 +127,10 @@ pub fn process(
         }
     }
 
-    // §6 约束 4 / §7.3：延迟绑定——双端 aligned 且引用通过者为生效候选；
-    // 全局图环检测（E-CYCLE）：循环边全集失效，其余子图正常输出。
+    // §6 constraint 4 / §7.3: deferred binding — both ends aligned and the
+    // reference resolved makes an edge an effectiveness candidate; cycle
+    // detection on the global graph (E-CYCLE) invalidates the whole cycle
+    // edge set while the rest of the subgraph is emitted normally.
     let candidate_pairs: Vec<(usize, (&str, &str))> = norm
         .iter()
         .enumerate()
@@ -155,10 +165,11 @@ pub fn process(
                 (true, None)
             }
         } else if e.relation == RELATION_DEPEND && status_of(&e.from) == Some(STATUS_ALIGNED) {
-            // 源已 aligned 而目标未 aligned：失效原因记 W-UPSTREAM-PENDING。
+            // Source aligned but target not: the failure reason is recorded as
+            // W-UPSTREAM-PENDING.
             (false, Some(diag::W_UPSTREAM_PENDING.to_string()))
         } else {
-            // 对齐性 pending / nascent：仅未生效，无失效码。
+            // Alignment pending / nascent: merely not effective, no failure code.
             (false, None)
         };
         if effective {
@@ -180,8 +191,9 @@ pub fn process(
     (entries, graph_edges)
 }
 
-/// Kosaraju 迭代 SCC：返回与 `pairs` 等长的标记，true 表示该边属于循环边全集
-/// （两端同属一个非平凡 SCC，或为自环）。
+/// Iterative Kosaraju SCC: returns one mark per input pair, true when that
+/// edge belongs to the cycle edge set (both ends in one non-trivial SCC, or a
+/// self-loop).
 fn cycle_edge_marks(pairs: &[(&str, &str)]) -> Vec<bool> {
     if pairs.is_empty() {
         return vec![];
@@ -206,7 +218,7 @@ fn cycle_edge_marks(pairs: &[(&str, &str)]) -> Vec<bool> {
         radj[v].push(u);
     }
 
-    // 一遍：迭代求后序
+    // Pass one: iterative post-order
     let mut order = Vec::with_capacity(n);
     let mut visited = vec![false; n];
     let mut it = vec![0usize; n];
@@ -231,7 +243,7 @@ fn cycle_edge_marks(pairs: &[(&str, &str)]) -> Vec<bool> {
         }
     }
 
-    // 二遍：反图收集 SCC
+    // Pass two: collect SCCs on the reverse graph
     let mut comp = vec![usize::MAX; n];
     let mut comp_size: Vec<usize> = Vec::new();
     for &u in order.iter().rev() {
@@ -266,7 +278,7 @@ mod tests {
 
     #[test]
     fn cycle_marks() {
-        // a -> b -> c -> a 及 b -> d（d 不在环内）
+        // a -> b -> c -> a and b -> d (d is not on a cycle)
         let pairs = vec![("a", "b"), ("b", "c"), ("c", "a"), ("b", "d")];
         let marks = cycle_edge_marks(&pairs);
         assert_eq!(marks, vec![true, true, true, false]);

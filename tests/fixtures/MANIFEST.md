@@ -28,8 +28,11 @@
 | nfc_violation | §4.2 W-NFC-VIOLATION | NFD 标题警告 |
 | redundant_meta | §5.1 W-REDUNDANT-META | 采纳后后续注释忽略并告警 |
 | no_nodes | §3.2/§4 | 无节点文档：空节点表、空图 |
+| slug_istanbul | §4.2 | U+0130 Simple Lowercase Mapping → id="istanbul"（无 U+0307） |
+| boundary_setext | §4.1 | Setext H1（`===`）不切分节点；仅 1 节点 |
+| meta_blank_gap | §5.1 | 标题与元数据间空行：注释仍为"第一个非空行"，被采纳，无 W-META-PLACEMENT |
 
 §11 码覆盖率：E-MISSING-ID / E-META-SYNTAX / E-META-FIELD / E-DUP-ID /
 E-REF-NOT-FOUND / E-CYCLE / W-VERSION-MISMATCH / W-DOC-META /
 W-CYCLE-DECLARED / W-REDUNDANT-EDGE / W-META-PLACEMENT /
-W-REDUNDANT-META / W-UPSTREAM-PENDING / W-NFC-VIOLATION — 14/14。
+W-REDUNDANT-META / W-UPSTREAM-PENDING / W-NFC-VIOLATION — 14/14（25 组）。

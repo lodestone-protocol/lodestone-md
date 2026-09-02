@@ -1,23 +1,27 @@
-//! 节点边界扫描（规范 §4.1）：基于 CommonMark 0.31.2 块级解析（comrak，ADR-0001）。
+//! Node boundary scanning (spec §4.1): based on CommonMark 0.31.2 block-level
+//! parsing (comrak, ADR-0001).
 //!
-//! 边界 = 文档顶层块序列中的 ATX 一级标题，且行首零空白缩进（col == 1）。
-//! Setext 标题、围栏/缩进代码块内、容器块内、1–3 空格缩进的标题均不构成边界。
+//! A boundary is an ATX level-1 heading in the document's top-level block
+//! sequence with zero leading whitespace (col == 1). Setext headings,
+//! fenced/indented code block content, container content, and 1–3-space
+//! indented headings are not boundaries.
 
 use comrak::nodes::{AstNode, NodeValue};
 use comrak::{parse_document, Arena, Options};
 
 pub struct Heading {
-    /// 物理行号（1-based）
+    /// Physical line (1-based)
     pub line: usize,
-    /// 物理列号（1-based）；协议要求零缩进即 col == 1
+    /// Physical column (1-based); the protocol requires col == 1 (zero indent)
     pub col: usize,
-    /// 标题文本（内联文本聚合，供 slug 派生）
+    /// Heading text (aggregated inline text, for slug derivation)
     pub text: String,
 }
 
 pub struct ScanOut {
     pub headings: Vec<Heading>,
-    /// 代码块（围栏与缩进）物理行区间 [start, end]，供元数据扫描避开围栏内容
+    /// Code block (fenced and indented) physical line ranges [start, end],
+    /// so metadata scanning can skip fenced content
     pub code_ranges: Vec<(usize, usize)>,
 }
 

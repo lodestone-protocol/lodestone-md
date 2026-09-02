@@ -1,11 +1,12 @@
-//! 派生字段（规范 §8.1）：chars / body_start / body_end。
+//! Derived fields (spec §8.1): chars / body_start / body_end.
 //!
-//! 对有效与无效节点统一适用。body_start/body_end 为原始文件物理行号（1-based）。
+//! Computed uniformly for valid and invalid nodes. body_start/body_end are
+//! physical line numbers in the source file (1-based).
 
 use crate::lines::is_blank;
 use crate::nodemeta::{PREFIX, SUFFIX};
 
-/// 返回 (chars, body_start, body_end)。
+/// Returns (chars, body_start, body_end).
 pub fn compute(
     lines: &[String],
     title_line: usize,
@@ -17,9 +18,11 @@ pub fn compute(
         return (0, None, None);
     }
 
-    // 排除行：标题行之后第一个非空行，且为单行完整形态 mddag 注释。
-    // 未闭合、跨行、近似前缀变体均不构成排除行。
-    // （首个非空行不可能是围栏内容：围栏开启行本身先于其内部任何行出现。）
+    // Exclusion line: the first non-empty line after the heading, when it is a
+    // single-line, well-formed mddag comment. Unclosed, multi-line, and
+    // near-prefix variants are not exclusion lines.
+    // (The first non-empty line cannot be fenced content: a fence opener would
+    // precede any inner line.)
     let _ = in_code;
     let first_non_empty = (start..=end_line).find(|&i| !is_blank(&lines[i - 1]));
     let exclude = first_non_empty.filter(|&i| {
@@ -27,7 +30,8 @@ pub fn compute(
         l.starts_with(PREFIX) && l.ends_with(SUFFIX)
     });
 
-    // 排除行是首个非空行，故其前（若有）全为空行；候选正文自排除行之后开始。
+    // The exclusion line is the first non-empty line, so any lines before it
+    // are blank; the candidate body begins after it.
     let mut lo = match exclude {
         Some(e) => e + 1,
         None => start,
@@ -43,11 +47,12 @@ pub fn compute(
         return (0, None, None);
     }
 
-    // chars = 各行去行尾换行序列后按 U+000A 连接的 Unicode 码点数。
+    // chars = count of Unicode scalar values in the body lines joined by
+    // U+000A (line endings stripped from each line).
     let mut chars: usize = 0;
     for i in lo..=hi {
         chars += lines[i - 1].chars().count();
     }
-    chars += hi - lo; // 连接用换行符
+    chars += hi - lo; // joining newlines
     (chars, Some(lo), Some(hi))
 }

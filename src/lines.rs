@@ -1,6 +1,7 @@
-//! 物理行切分（规范 §8.1）：LF / CRLF / CR 均视为一行结束。
+//! Physical line splitting (spec §8.1): LF / CRLF / CR all terminate a line.
 //!
-//! 文件末尾的换行符终止末行而不产生新空行；BOM 由调用方先行剥离。
+//! A trailing newline terminates the last line without creating an extra empty
+//! line; the BOM is stripped by the caller beforehand.
 
 pub fn split_lines(text: &str) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
@@ -24,7 +25,7 @@ pub fn split_lines(text: &str) -> Vec<String> {
     out
 }
 
-/// CommonMark 空行定义：仅含空格 / 制表符。
+/// CommonMark blank line: spaces and/or tabs only.
 pub fn is_blank(line: &str) -> bool {
     line.chars().all(|c| c == ' ' || c == '\t')
 }

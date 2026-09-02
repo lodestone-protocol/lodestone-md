@@ -1,25 +1,30 @@
-//! 文档级元数据（规范 §3.1）：行为钉死，全部失败路径收敛于"警告 + 继续解析"。
+//! Document-level metadata (spec §3.1): behaviors are pinned; every failure
+//! path converges on "warn + keep parsing".
 
 use crate::diag::{self, Diagnostic};
 use crate::jsonutil;
 use crate::output::DocMetaOut;
 
-/// 顶格、单行、精确前缀（两个空格位置精确匹配）。
+/// Top-aligned, single-line, exact prefix (the two spaces match exactly).
 pub const PREFIX: &str = "<!-- mddag: ";
 pub const SUFFIX: &str = "-->";
 pub const SUPPORTED_VERSION: &str = "1.3";
 
-/// 从文件第一个物理行（BOM 已剥离）提取文档级元数据。
+/// Extracts document-level metadata from the first physical line (BOM stripped).
 ///
-/// 返回 (Option<DocMetaOut>，是否被采纳)。未采纳时调用方继续尽力解析。
+/// Returns the metadata when adopted; otherwise the caller keeps parsing
+/// best-effort.
 pub fn extract(line1: Option<&str>, diag: &mut Vec<Diagnostic>) -> Option<DocMetaOut> {
     let line = line1?;
-    // 提取规则：第一个块为顶格单行且精确匹配前缀时采纳；否则普通 HTML 块，无警告。
+    // Extraction rule: adopt only when the first block is a top-aligned
+    // single-line comment matching the exact prefix; otherwise it is an
+    // ordinary HTML block (legal state, no warning).
     if !line.starts_with(PREFIX) || !line.ends_with(SUFFIX) {
         return None;
     }
     let body = &line[PREFIX.len()..line.len() - SUFFIX.len()];
-    // 注释体 MUST NOT 含 "-->"（与节点元数据一致）；违反收敛于 W-DOC-META + 忽略。
+    // The body MUST NOT contain "-->" (same constraint as node metadata);
+    // a violation converges on W-DOC-META + ignore.
     if body.contains(SUFFIX) {
         diag.push(Diagnostic::warning(
             diag::W_DOC_META,
@@ -29,7 +34,7 @@ pub fn extract(line1: Option<&str>, diag: &mut Vec<Diagnostic>) -> Option<DocMet
         ));
         return None;
     }
-    // JSON 重复键 → W-DOC-META，忽略之，继续解析。
+    // JSON duplicate keys → W-DOC-META, ignore, keep parsing.
     if jsonutil::duplicate_keys(body) {
         diag.push(Diagnostic::warning(
             diag::W_DOC_META,
@@ -64,7 +69,7 @@ pub fn extract(line1: Option<&str>, diag: &mut Vec<Diagnostic>) -> Option<DocMet
         }
     };
     match obj.get("version") {
-        // version 未声明：未声明即未承诺，无警告，继续尽力解析。
+        // Version not declared: no promise made, no warning, keep parsing.
         None => Some(DocMetaOut { version: None }),
         Some(serde_json::Value::String(s)) => {
             if s != SUPPORTED_VERSION {
@@ -82,7 +87,7 @@ pub fn extract(line1: Option<&str>, diag: &mut Vec<Diagnostic>) -> Option<DocMet
                 version: Some(s.clone()),
             })
         }
-        // version 类型非法 → W-DOC-META，忽略。
+        // Version of the wrong type → W-DOC-META, ignore.
         Some(_) => {
             diag.push(Diagnostic::warning(
                 diag::W_DOC_META,

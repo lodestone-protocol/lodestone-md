@@ -1,7 +1,9 @@
-//! Golden Fixture 测试（规范"遵循建议 E"）。
+//! Golden Fixture tests (spec "recommendation E").
 //!
-//! 每个 `tests/fixtures/<name>.md` 对应 `<name>.json` 期望输出（§8 契约整体快照）。
-//! `UPDATE_GOLDEN=1 cargo test` 重新生成期望文件；生成后必须人工核对（尤其 §10 数值）。
+//! Each `tests/fixtures/<name>.md` has a matching `<name>.json` expected
+//! output (a full §8 contract snapshot). `UPDATE_GOLDEN=1 cargo test`
+//! regenerates the expected files; generated files must be reviewed by hand
+//! (especially the §10 figures).
 
 use std::env;
 use std::fs;
@@ -46,7 +48,8 @@ fn golden_fixtures() {
     }
 }
 
-/// 确定性断言（VISION 承诺 1）：同一输入两次解析输出逐字节一致。
+/// Determinism assertion (VISION promise 1): two parses of one input produce
+/// byte-identical output.
 #[test]
 fn parse_is_deterministic() {
     for case in fixture_paths() {
@@ -57,7 +60,49 @@ fn parse_is_deterministic() {
     }
 }
 
-/// 规范 §10 示例是内置黄金基准：数值级断言（不依赖快照文件）。
+fn fixture_path(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(name)
+}
+
+/// Review decision P1: cross-implementation anchor for Simple vs Full Case
+/// Mapping. Under Unicode 15.1 Simple Lowercase Mapping, U+0130 lowercases to
+/// U+0069, so the id is exactly "istanbul" (no U+0307 combining dot).
+#[test]
+fn slug_istanbul_simple_lowercase() {
+    let r = mddag::parse(&fs::read_to_string(fixture_path("slug_istanbul.md")).unwrap());
+    assert_eq!(r.nodes.len(), 1);
+    let n = &r.nodes[0];
+    assert!(n.valid);
+    assert_eq!(n.id.as_deref(), Some("istanbul"));
+    assert!(!r.nodes[0].id.as_deref().unwrap_or("").contains('\u{0307}'));
+}
+
+/// Review decision setext: a Setext H1 (`===` underline) is not a node
+/// boundary (§4.1 recognizes ATX headings only).
+#[test]
+fn setext_h1_is_not_a_boundary() {
+    let r = mddag::parse(&fs::read_to_string(fixture_path("boundary_setext.md")).unwrap());
+    assert_eq!(r.nodes.len(), 1, "setext heading must not split a node");
+    assert_eq!(r.nodes[0].id.as_deref(), Some("a"));
+}
+
+/// Review decision blank gap: with a blank line between the heading and the
+/// comment, the comment is still the "first non-empty line" and must be
+/// adopted (§5.1).
+#[test]
+fn metadata_accepted_across_blank_gap() {
+    let r = mddag::parse(&fs::read_to_string(fixture_path("meta_blank_gap.md")).unwrap());
+    assert_eq!(r.nodes.len(), 1);
+    assert_eq!(r.nodes[0].id.as_deref(), Some("c"));
+    assert_eq!(r.nodes[0].status, "aligned");
+    assert!(
+        r.diagnostics.iter().all(|d| d.code != "W-META-PLACEMENT"),
+        "blank gap between title and metadata must not warn"
+    );
+}
+
+/// The spec §10 example is a built-in golden baseline: numeric assertions
+/// (independent of snapshot files).
 #[test]
 fn spec_10_example_values() {
     let input = fs::read_to_string(
@@ -83,7 +128,8 @@ fn spec_10_example_values() {
         assert_eq!(n.body_end, Some(*be), "node {} body_end", id);
     }
 
-    // 全局图为空（concl-01 未 aligned）；规范化边集合含全部 4 条声明边。
+    // Global graph empty (concl-01 not aligned); the normalized edge set
+    // keeps all 4 declared edges.
     assert!(r.graph.edges.is_empty(), "global graph must be empty");
     assert_eq!(r.edges.len(), 4, "normalized edge count");
     assert!(r
@@ -91,7 +137,7 @@ fn spec_10_example_values() {
         .iter()
         .all(|e| !e.effective), "no edge effective");
 
-    // plan-01 -> old-note 失效于 E-REF-NOT-FOUND。
+    // plan-01 -> old-note fails with E-REF-NOT-FOUND.
     assert!(r.diagnostics.iter().any(|d| d.code == "E-REF-NOT-FOUND"
         && d.edge.as_deref() == Some("plan-01 -> old-note")));
 }
