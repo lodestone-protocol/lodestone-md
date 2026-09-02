@@ -42,3 +42,14 @@ lodestone-md 是 Lodestone Protocol（MD-DAG）v1.3 Final 规范的权威参考�
 - Cargo.lock 入库，保证跨机器字节级一致的依赖图（确定性边界的工程延伸）。
 - comrak 升级属于接口变更，须走新 ADR。
 - Simple Lowercase Mapping 的近似实现若在测试中暴露个案偏差，以新增测试个案 + 修正映射函数的方式收敛，不回退到全表方案。
+
+---
+
+## 附注：comrak 0.54 ↔ CommonMark 0.31.2 核对结论（P3 T2 观察项，2026-09-02）
+
+comrak 0.54.0 官方 README 声明 "Compliant with **CommonMark 0.31.2** by
+default"，并附 652/652 一致性徽章（对 commonmark-spec
+@9103e341…/spec.txt）。与协议 §4.1 钉死的 CommonMark 0.31.2 基准**精确一致，
+无偏差**。GFM 扩展默认关闭（`Options::default()` 零扩展面），与协议"零渲染
+污染/零平台依赖"立场一致。决议：维持 comrak 0.54 锁定，无需升级或替换。
+若未来协议钉死新版 CommonMark，comrak 升级走新 ADR。
