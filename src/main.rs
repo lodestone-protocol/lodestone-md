@@ -17,12 +17,13 @@ fn main() {
         Some("body") => cmd_body(&args),
         Some("sediment") => cmd_read(&args, |d| mddag::project::sediment_index(d)),
         Some("check") => cmd_check(&args),
+        Some("decay") => cmd_decay(&args),
         Some("version") => {
             println!("mddag {}", mddag::PROTOCOL_VERSION);
             0
         }
         _ => {
-            eprintln!("usage: mddag <balls|ball|body|sediment|check|version> ...");
+            eprintln!("usage: mddag <balls|ball|body|sediment|check|decay|version> ...");
             2
         }
     };
@@ -117,6 +118,46 @@ fn cmd_check(args: &[String]) -> i32 {
                 print_diags(&doc);
             }
             has_errors(&doc) as i32
+        }
+        Err(e) => {
+            eprintln!("mddag: 读取失败 {path}: {e}");
+            1
+        }
+    }
+}
+
+fn cmd_decay(args: &[String]) -> i32 {
+    let (Some(path), Some(target)) = (args.get(2), args.get(3)) else {
+        eprintln!("usage: mddag decay <file> <target>   # target = 磁石 slug 或 <slug>-full 沉淀条目");
+        return 2;
+    };
+    match std::fs::read_to_string(path) {
+        Ok(text) => {
+            let r = mddag::ops::decay(&text, target);
+            if !r.diagnostics.is_empty() {
+                for d in &r.diagnostics {
+                    eprintln!("mddag: {:?} {}:{} {}", d.severity, d.code, d.line, d.message);
+                }
+                return 1;
+            }
+            // rewrite in place
+            match std::fs::write(path, &r.text) {
+                Ok(_) => {
+                    eprintln!("{}", r.audit);
+                    // verify by reparsing
+                    let doc = mddag::scan(&r.text);
+                    if !doc.diagnostics.is_empty() {
+                        eprintln!("mddag: warning: decay 后文档有诊断:");
+                        print_diags(&doc);
+                    }
+                    println!("[ok] decay 完成, 磁石数 {}", doc.lodestones.len());
+                    0
+                }
+                Err(e) => {
+                    eprintln!("mddag: 写入失败 {path}: {e}");
+                    1
+                }
+            }
         }
         Err(e) => {
             eprintln!("mddag: 读取失败 {path}: {e}");

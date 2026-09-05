@@ -151,6 +151,57 @@ pub fn append_sediment(text: &str, full_slug: &str, content: &str) -> OpOutcome 
     OpOutcome { text: out, audit, diagnostics: Vec::new() }
 }
 
+/// decay — forget a target: remove a whole lodestone, a sediment entry,
+/// or a line range inside a lodestone body. The audit line records what was
+/// forgotten; the caller decides WHEN (TTL policy with its own clock).
+pub fn decay(text: &str, target: &str) -> OpOutcome {
+    let doc = scan(text);
+    // 1) sediment entry `## <target>-full`
+    if let Some(sed) = &doc.sediment {
+        if let Some(e) = sed.entries.iter().find(|e| e.slug == target) {
+            let audit = format!("- mddag-audit: decay {target}");
+            let out = remove_block(text, e.line, find_block_end(text, e.line));
+            return OpOutcome { text: out, audit, diagnostics: Vec::new() };
+        }
+    }
+    // 2) whole lodestone
+    if let Some(l) = doc.lodestones.iter().find(|l| l.slug == target) {
+        let audit = format!("- mddag-audit: decay {target}");
+        let out = remove_block(text, l.start_line, l.end_line);
+        return OpOutcome { text: out, audit, diagnostics: Vec::new() };
+    }
+    OpOutcome { text: text.to_string(), audit: String::new(),
+        diagnostics: vec![Diag::error("E-NO-SUCH-LODESTONE", 0, format!("磁石或沉淀条目不存在: {target}"))] }
+}
+
+/// decay_lines — forget a line range inside a lodestone's body (line numbers
+/// come from a previous parse; caller re-validates after the edit).
+pub fn decay_lines(text: &str, slug: &str, start: usize, end: usize) -> OpOutcome {
+    let doc = scan(text);
+    let Some(l) = doc.lodestones.iter().find(|l| l.slug == slug) else {
+        return OpOutcome { text: text.to_string(), audit: String::new(),
+            diagnostics: vec![Diag::error("E-NO-SUCH-LODESTONE", 0, format!("磁石不存在: {slug}"))] };
+    };
+    if start < l.start_line || end > l.end_line || start > end {
+        return OpOutcome { text: text.to_string(), audit: String::new(),
+            diagnostics: vec![Diag::error("E-BAD-RANGE", 0, format!("行范围越界: {start}-{end} (磁石 {}-{})", l.start_line, l.end_line))] };
+    }
+    let audit = format!("- mddag-audit: decay {slug} lines {start}-{end}");
+    let mut out = String::new();
+    for (i, line) in text.lines().enumerate() {
+        let n = i + 1;
+        if n >= start && n <= end {
+            continue;
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    if text.ends_with('\n') && out.ends_with('\n') {
+        // keep the trailing-newline invariant
+    }
+    OpOutcome { text: out, audit, diagnostics: Vec::new() }
+}
+
 // ---------- helpers ----------
 
 /// Replace the `- status:` line of a lodestone with the new status value.
@@ -182,6 +233,35 @@ fn replace_status_line(text: &str, l: &crate::doc::Lodestone, next: Status) -> S
                 out.push_str(&rest2);
                 return out;
             }
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    out
+}
+
+/// End line of a block starting at `start`: the line before the next root
+/// heading, or EOF.
+fn find_block_end(text: &str, start: usize) -> usize {
+    let lines: Vec<&str> = text.lines().collect();
+    let mut end = lines.len();
+    for (i, line) in lines.iter().enumerate() {
+        let n = i + 1;
+        if n > start && line.starts_with("# ") {
+            end = n - 1;
+            break;
+        }
+    }
+    end
+}
+
+/// Remove lines [start, end] (1-based, inclusive).
+fn remove_block(text: &str, start: usize, end: usize) -> String {
+    let mut out = String::new();
+    for (i, line) in text.lines().enumerate() {
+        let n = i + 1;
+        if n >= start && n <= end {
+            continue;
         }
         out.push_str(line);
         out.push('\n');
@@ -318,5 +398,52 @@ mod tests {
     fn append_sediment_requires_zone() {
         let r = append_sediment("# 甲\n- status: draft\n", "甲-full", "内容");
         assert!(r.diagnostics.iter().any(|d| d.code == "E-NO-SEDIMENT"));
+    }
+}
+
+#[cfg(test)]
+mod decay_tests {
+    use super::*;
+
+    const DOC: &str = "# 甲\n- status: converged\n铁粉甲。\n\n# 乙\n- status: draft\n铁粉乙。\n\n# 沉淀区\n## 甲-full\n（归档正文）\n";
+
+    #[test]
+    fn decay_removes_lodestone() {
+        let r = decay(DOC, "乙");
+        assert!(!r.text.contains("# 乙"));
+        assert!(r.text.contains("# 甲"));
+        assert!(r.audit.contains("decay 乙"));
+        // reparse legal
+        let d = scan(&r.text);
+        assert!(d.diagnostics.is_empty());
+        assert_eq!(d.lodestones.len(), 1);
+    }
+
+    #[test]
+    fn decay_removes_sediment_entry() {
+        let r = decay(DOC, "甲-full");
+        assert!(!r.text.contains("## 甲-full"));
+        assert!(!r.text.contains("归档正文"));
+        assert!(r.text.contains("# 甲"));
+    }
+
+    #[test]
+    fn decay_lines_removes_range() {
+        let r = decay_lines(DOC, "甲", 3, 3);
+        assert!(!r.text.contains("铁粉甲。"));
+        assert!(r.text.contains("# 甲"));
+        assert!(r.audit.contains("lines 3-3"));
+    }
+
+    #[test]
+    fn decay_unknown_target() {
+        let r = decay(DOC, "不存在的");
+        assert!(r.diagnostics.iter().any(|d| d.code == "E-NO-SUCH-LODESTONE"));
+    }
+
+    #[test]
+    fn decay_lines_out_of_range() {
+        let r = decay_lines(DOC, "甲", 1, 99);
+        assert!(r.diagnostics.iter().any(|d| d.code == "E-BAD-RANGE"));
     }
 }
