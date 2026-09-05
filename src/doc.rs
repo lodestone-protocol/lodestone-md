@@ -1,9 +1,9 @@
-//! Document model (v2.0-draft §2/§3): nodes, magnetic lines, sediment.
+//! Document model (v2.0-draft §2/§3): lodes, magnetic lines, sediment.
 //! Pure data — built by `scan`, projected by `project`, mutated by `ops`.
 
 use crate::diag::Diag;
 
-/// Interaction-mode status of a node (v2.0-draft §3.3): draft -> converged
+/// Interaction-mode status of a lode (v2.0-draft §3.3): draft -> converged
 /// -> aligned, one-way.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Status {
@@ -30,8 +30,8 @@ impl Status {
     }
 }
 
-/// A magnetic line (edge): a link `[label](#target-slug)` in a node body
-/// whose target is another node (v2.0-draft §3.4).
+/// A magnetic line (edge): a link `[label](#target-slug)` in a lode body
+/// whose target is another lode (v2.0-draft §3.4).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MagneticLine {
     pub from: String,
@@ -53,7 +53,7 @@ pub struct CrossLink {
 }
 
 /// One lodestone (node): a root-level `#` heading region (v2.0-draft §3.1).
-/// Named after the magnet metaphor — the lodestone is the node itself.
+/// Named after the magnet metaphor — the lodestone is the lode itself.
 #[derive(Debug, Clone)]
 pub struct Lodestone {
     pub slug: String,
@@ -61,12 +61,12 @@ pub struct Lodestone {
     pub title_line: usize,
     pub status: Status,
     pub summary: Option<String>,
-    /// 1-based line range of the node region (title .. next node / EOF).
+    /// 1-based line range of the lode region (title .. next lode / EOF).
     pub start_line: usize,
     pub end_line: usize,
     /// Sub-heading tree (lines of `##`/`###`... headings inside the lodestone).
     pub subheadings: Vec<(usize, usize, String)>, // (line, level, heading text)
-    /// Magnetic lines found in the whole node region.
+    /// Magnetic lines found in the whole lode region.
     pub lines: Vec<MagneticLine>,
     /// Body lines (region minus title line, minus the status list block).
     pub body: Vec<usize>, // line numbers
@@ -90,7 +90,7 @@ pub struct Doc {
     pub diagnostics: Vec<Diag>,
 }
 
-/// The sediment zone (`# 沉淀区`, reserved heading — never a node, never
+/// The sediment zone (`# 沉淀区`, reserved heading — never a lode, never
 /// referenced by magnetic lines, v2.0-draft §3.1/§3.5).
 #[derive(Debug, Clone)]
 pub struct Sediment {

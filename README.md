@@ -16,9 +16,9 @@ branch is the v2 line, **not frozen** — it evolves until it stops changing.
 
 ## Why v2 (the magnet-ball philosophy)
 
-> Internal implementation names use DAG standard terms: the lodestone is a
-> `node`, the magnetic line is an `edge`-like link — concept names stay
-> 磁石/磁力线 in Chinese docs, code/CLI names stay short and precise.
+> Internal implementation names stay short and unambiguous: the lodestone
+> is a `lode` (lodestone root, the ore vein), CLI `lodes`/`lode`,
+> operator `add-lode`; concept names stay 磁石/磁力线 in Chinese docs.
 >
 > People converse like several magnet balls rolling in sand: the balls are
 > main threads, the sand is redundancy and ambiguity. Balls absorb iron
@@ -36,8 +36,8 @@ markdown; agents read projections on demand.
 
 | Command | Level | What it gives |
 |---|---|---|
-| `mddag nodes <file>` | L0 | one line per lodestone: title + status (+ summary if aligned) |
-| `mddag node <slug> <file>` | L1 | one lodestone: summary + sub-heading tree |
+| `mddag lodes <file>` | L0 | one line per lodestone: title + status (+ summary if aligned) |
+| `mddag lode <slug> <file>` | L1 | one lodestone: summary + sub-heading tree |
 | `mddag body <slug> <file>` | L2 | body fragment (optional anchor) |
 | `mddag sediment <file>` | — | sediment zone index (converged archives) |
 | `mddag check <file>` | — | parse + diagnostics; exit 1 on errors |
@@ -46,13 +46,13 @@ markdown; agents read projections on demand.
 | `mddag index <dir> [-o PATH] [--check]` | — | library-layer `.lodestone` snapshot: cross-doc validation (path/slug/cycle) + staleness check |
 
 ```console
-$ mddag nodes session.md
+$ mddag lodes session.md
 # 方案选型  [converged]
 # Anaphase 驾驶舱  [aligned]
   驾驶舱是 Anaphase 的界面，不是 Helix 的。
 # 磁铁球哲学  [draft]
 
-$ mddag node anaphase-驾驶舱 session.md
+$ mddag lode anaphase-驾驶舱 session.md
 # Anaphase 驾驶舱  [aligned]
   summary: 驾驶舱是 Anaphase 的界面，不是 Helix 的。
 定位
@@ -61,7 +61,7 @@ $ mddag node anaphase-驾驶舱 session.md
 
 ## Runtime — five streaming append ops
 
-`add-node` / `absorb` / `advance-status` / `compress` / `append-sediment`
+`add-lode` / `absorb` / `advance-status` / `compress` / `append-sediment`
 / `decay` / `strip` (v2.0-draft §5). Each returns the new text + an audit
 record line
 (deterministic; the caller attaches time/source). `compress` moves an
