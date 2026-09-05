@@ -21,10 +21,10 @@ pub struct OpOutcome {
 }
 
 
-/// add-ball — create a new lodestone before the sediment zone (or at EOF).
+/// add-node — create a new lodestone before the sediment zone (or at EOF).
 /// `body` is the initial content (may be empty).
-pub fn add_ball(text: &str, slug: &str, title: &str, body: &str) -> OpOutcome {
-    let audit = format!("- mddag-audit: add-ball {slug}");
+pub fn add_node(text: &str, slug: &str, title: &str, body: &str) -> OpOutcome {
+    let audit = format!("- mddag-audit: add-node {slug}");
     let block = format!("\n# {title}\n- status: draft\n{body}\n");
     let new_text = insert_before_sediment(text, &block);
     OpOutcome { text: new_text, audit, diagnostics: Vec::new() }
@@ -127,7 +127,7 @@ pub fn append_sediment(text: &str, full_slug: &str, content: &str) -> OpOutcome 
     let doc = scan(text);
     let Some(sed) = &doc.sediment else {
         return OpOutcome { text: text.to_string(), audit: String::new(),
-            diagnostics: vec![Diag::error("E-NO-SEDIMENT", 0, "文档无沉淀区——先 add-ball + aligned + compress")] };
+            diagnostics: vec![Diag::error("E-NO-SEDIMENT", 0, "文档无沉淀区——先 add-node + aligned + compress")] };
     };
     let audit = format!("- mddag-audit: append-sediment {full_slug}");
     let entry = format!("## {full_slug}\n{content}\n");
@@ -392,8 +392,8 @@ mod tests {
     const BASE: &str = "# 甲\n- status: draft\n正文甲。\n\n# 沉淀区\n";
 
     #[test]
-    fn add_ball_before_sediment() {
-        let r = add_ball(BASE, "乙", "乙", "正文乙。\n");
+    fn add_node_before_sediment() {
+        let r = add_node(BASE, "乙", "乙", "正文乙。\n");
         assert!(r.text.contains("# 乙\n- status: draft\n正文乙。"));
         assert!(r.text.contains("# 沉淀区"));
         // sediment stays last

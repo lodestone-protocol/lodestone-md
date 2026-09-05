@@ -25,9 +25,9 @@ pub fn project(sessions: &[Session]) -> Result<String, Vec<Diag>> {
     }
 
     let mut edges: Vec<(&CrossLink, &str, &str)> = Vec::new(); // (link, from_path, to_path)
-    let mut total_balls = 0usize;
+    let mut total_nodes = 0usize;
     for s in sessions {
-        total_balls += s.doc.lodestones.len();
+        total_nodes += s.doc.lodestones.len();
         for cl in &s.doc.cross_links {
             let to_path = cl.path.as_str();
             if !by_path.contains_key(to_path) {
@@ -72,7 +72,7 @@ pub fn project(sessions: &[Session]) -> Result<String, Vec<Diag>> {
     let session_count = sessions.len();
     let mut out = String::from("- session: library-index\n# 经历库\n- status: aligned\n");
     out.push_str(&format!(
-        "- summary: {session_count} 会话 · {total_balls} 磁石 · {edge_count} 磁力线\n"
+        "- summary: {session_count} 会话 · {total_nodes} 磁石 · {edge_count} 磁力线\n"
     ));
     for s in sessions {
         let created = s

@@ -5,7 +5,7 @@
 //! runs -> trim leading/trailing `-` -> truncate to 64.
 
 /// Derive the slug for a heading text. `None` when the result is empty
-/// (the ball then has no usable id -> E-MISSING-ID).
+/// (the node then has no usable id -> E-MISSING-ID).
 pub fn slugify(title: &str) -> Option<String> {
     let mut out = String::with_capacity(title.len());
     for ch in title.chars() {

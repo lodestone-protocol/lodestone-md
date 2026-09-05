@@ -1,6 +1,6 @@
 //! mddag CLI (v2.0-draft) — read-protocol commands, choices not free text:
-//!   mddag balls <file>            L0 lodestone list
-//!   mddag ball <slug> <file>      L1 single lodestone expansion
+//!   mddag nodes <file>            L0 lodestone list
+//!   mddag node <slug> <file>      L1 single lodestone expansion
 //!   mddag body <slug> <file>      L2 body fragment
 //!   mddag sediment <file>         sediment index
 //!   mddag check <file>            parse + diagnostics (exit 1 on errors)
@@ -12,8 +12,8 @@ use std::process::exit;
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let code = match args.get(1).map(String::as_str) {
-        Some("balls") => cmd_read(&args, |d| mddag::project::l0(d)),
-        Some("ball") => cmd_ball(&args),
+        Some("nodes") => cmd_read(&args, |d| mddag::project::l0(d)),
+        Some("node") => cmd_node(&args),
         Some("body") => cmd_body(&args),
         Some("sediment") => cmd_read(&args, |d| mddag::project::sediment_index(d)),
         Some("check") => cmd_check(&args),
@@ -26,7 +26,7 @@ fn main() {
             0
         }
         _ => {
-            eprintln!("usage: mddag <balls|ball|body|sediment|check|decay|strip|library|index|version> ...");
+            eprintln!("usage: mddag <nodes|node|body|sediment|check|decay|strip|library|index|version> ...");
             2
         }
     };
@@ -52,9 +52,9 @@ fn cmd_read(args: &[String], f: impl Fn(&mddag::Doc) -> String) -> i32 {
     }
 }
 
-fn cmd_ball(args: &[String]) -> i32 {
+fn cmd_node(args: &[String]) -> i32 {
     let (Some(slug), Some(path)) = (args.get(2), args.get(3)) else {
-        eprintln!("usage: mddag ball <slug> <file>");
+        eprintln!("usage: mddag node <slug> <file>");
         return 2;
     };
     match std::fs::read_to_string(path) {
