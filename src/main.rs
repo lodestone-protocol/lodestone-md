@@ -1,107 +1,136 @@
-//! CLI (the command-line face of §9 three-level loading):
+//! mddag CLI (v2.0-draft) — read-protocol commands, choices not free text:
+//!   mddag balls <file>            L0 lodestone list
+//!   mddag ball <slug> <file>      L1 single lodestone expansion
+//!   mddag body <slug> <file>      L2 body fragment
+//!   mddag sediment <file>         sediment index
+//!   mddag check <file>            parse + diagnostics (exit 1 on errors)
 //!
-//! - `mddag <file.md | ->`            full output (§8 contract JSON, default)
-//! - `mddag --skeleton <file.md | ->`  L1 skeleton (node table + edges + diagnostics + graph)
-//! - `mddag --body <id> <file.md | ->` L2 targeted body text (plain text)
-//! - `mddag --projection <file.md | ->` appendix A edge projection labels
-//! - `mddag --review <file.md | ->`    human review surface (disputes + warning summary)
+//! Output is the projection text only (stdout); diagnostics go to stderr.
 
-use std::env;
-use std::fs;
-use std::io::{self, Read};
-use std::process;
-
-enum Mode {
-    Full,
-    Skeleton,
-    Body(String),
-    Projection,
-    Review,
-}
-
-fn usage() -> ! {
-    eprintln!(
-        "usage:\n  mddag <file.md | ->\n  mddag --skeleton <file.md | ->\n  mddag --body <id> <file.md | ->\n  mddag --projection <file.md | ->\n  mddag --review <file.md | ->"
-    );
-    process::exit(2);
-}
+use std::process::exit;
 
 fn main() {
-    let args: Vec<String> = env::args().skip(1).collect();
-    let (mode, path) = match args.as_slice() {
-        [p] => (Mode::Full, p.clone()),
-        [flag, p] if flag == "--skeleton" => (Mode::Skeleton, p.clone()),
-        [flag, id, p] if flag == "--body" => (Mode::Body(id.clone()), p.clone()),
-        [flag, p] if flag == "--projection" => (Mode::Projection, p.clone()),
-        [flag, p] if flag == "--review" => (Mode::Review, p.clone()),
-        _ => usage(),
-    };
-
-    let input = if path == "-" {
-        let mut buf = String::new();
-        match io::stdin().read_to_string(&mut buf) {
-            Ok(_) => buf,
-            Err(e) => {
-                eprintln!("error reading stdin: {}", e);
-                process::exit(2);
-            }
+    let args: Vec<String> = std::env::args().collect();
+    let code = match args.get(1).map(String::as_str) {
+        Some("balls") => cmd_read(&args, |d| mddag::project::l0(d)),
+        Some("ball") => cmd_ball(&args),
+        Some("body") => cmd_body(&args),
+        Some("sediment") => cmd_read(&args, |d| mddag::project::sediment_index(d)),
+        Some("check") => cmd_check(&args),
+        Some("version") => {
+            println!("mddag {}", mddag::PROTOCOL_VERSION);
+            0
         }
-    } else {
-        match fs::read(&path) {
-            Ok(bytes) => match String::from_utf8(bytes) {
-                Ok(s) => s,
-                Err(_) => {
-                    eprintln!("error: input is not valid UTF-8");
-                    process::exit(2);
+        _ => {
+            eprintln!("usage: mddag <balls|ball|body|sediment|check|version> ...");
+            2
+        }
+    };
+    exit(code);
+}
+
+fn cmd_read(args: &[String], f: impl Fn(&mddag::Doc) -> String) -> i32 {
+    let Some(path) = args.get(2) else {
+        eprintln!("usage: mddag {} <file>", args.get(1).map(String::as_str).unwrap_or("?"));
+        return 2;
+    };
+    match std::fs::read_to_string(path) {
+        Ok(text) => {
+            let doc = mddag::scan(&text);
+            print_diags(&doc);
+            print!("{}", f(&doc));
+            has_errors(&doc) as i32
+        }
+        Err(e) => {
+            eprintln!("mddag: 读取失败 {path}: {e}");
+            1
+        }
+    }
+}
+
+fn cmd_ball(args: &[String]) -> i32 {
+    let (Some(slug), Some(path)) = (args.get(2), args.get(3)) else {
+        eprintln!("usage: mddag ball <slug> <file>");
+        return 2;
+    };
+    match std::fs::read_to_string(path) {
+        Ok(text) => {
+            let doc = mddag::scan(&text);
+            print_diags(&doc);
+            match mddag::project::l1(&doc, slug) {
+                Some(out) => {
+                    print!("{out}");
+                    has_errors(&doc) as i32
                 }
-            },
-            Err(e) => {
-                eprintln!("error reading {}: {}", path, e);
-                process::exit(2);
+                None => {
+                    eprintln!("mddag: 磁石不存在: {slug}");
+                    1
+                }
             }
         }
+        Err(e) => {
+            eprintln!("mddag: 读取失败 {path}: {e}");
+            1
+        }
+    }
+}
+
+fn cmd_body(args: &[String]) -> i32 {
+    let (Some(slug), Some(path)) = (args.get(2), args.get(3)) else {
+        eprintln!("usage: mddag body <slug> <file>  （可选: body <slug> <file> <anchor>）");
+        return 2;
     };
-
-    fn emit(value: &impl serde::Serialize) {
-        match serde_json::to_string_pretty(value) {
-            Ok(json) => println!("{}", json),
-            Err(e) => {
-                eprintln!("error serializing output: {}", e);
-                process::exit(1);
+    let anchor = args.get(4).map(String::as_str);
+    match std::fs::read_to_string(path) {
+        Ok(text) => {
+            let doc = mddag::scan(&text);
+            print_diags(&doc);
+            match mddag::project::l2(&doc, slug, anchor) {
+                Some(out) => {
+                    print!("{out}");
+                    has_errors(&doc) as i32
+                }
+                None => {
+                    eprintln!("mddag: 磁石或锚点不存在: {} {}", slug, anchor.unwrap_or(""));
+                    1
+                }
             }
         }
+        Err(e) => {
+            eprintln!("mddag: 读取失败 {path}: {e}");
+            1
+        }
     }
+}
 
-    match mode {
-        Mode::Full => {
-            let result = mddag::parse(&input);
-            emit(&result);
-        }
-        Mode::Skeleton => {
-            // L1 = node table + normalized edge set + diagnostics (plus the
-            // derivable global graph).
-            let result = mddag::parse(&input);
-            emit(&serde_json::json!({
-                "nodes": result.nodes,
-                "edges": result.edges,
-                "diagnostics": result.diagnostics,
-                "graph": result.graph,
-            }));
-        }
-        Mode::Body(id) => match mddag::body_text(&input, &id) {
-            Ok(text) => print!("{}", text),
-            Err(_) => {
-                eprintln!("error: node {:?} not found", id);
-                process::exit(1);
+fn cmd_check(args: &[String]) -> i32 {
+    let Some(path) = args.get(2) else {
+        eprintln!("usage: mddag check <file>");
+        return 2;
+    };
+    match std::fs::read_to_string(path) {
+        Ok(text) => {
+            let doc = mddag::scan(&text);
+            if doc.diagnostics.is_empty() {
+                println!("[ok] {} 磁石, 无诊断", doc.lodestones.len());
+            } else {
+                print_diags(&doc);
             }
-        },
-        Mode::Projection => {
-            let result = mddag::parse(&input);
-            emit(&mddag::projection::project(&result));
+            has_errors(&doc) as i32
         }
-        Mode::Review => {
-            let result = mddag::parse(&input);
-            emit(&mddag::projection::review(&result));
+        Err(e) => {
+            eprintln!("mddag: 读取失败 {path}: {e}");
+            1
         }
     }
+}
+
+fn print_diags(doc: &mddag::Doc) {
+    for d in &doc.diagnostics {
+        eprintln!("mddag: {:?} {}:{} {}", d.severity, d.code, d.line, d.message);
+    }
+}
+
+fn has_errors(doc: &mddag::Doc) -> bool {
+    doc.diagnostics.iter().any(|d| d.severity == mddag::Severity::Error)
 }

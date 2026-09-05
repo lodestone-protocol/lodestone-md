@@ -1,90 +1,91 @@
-# lodestone-md
+# lodestone-md (crate: mddag)
 
-> **Implements Lodestone Protocol v1.3.0**
+> **Implements Lodestone Protocol v2.0-draft (MD-DAG 2)**
 >
-> **Lodestone Protocol — Markdown-Embedded DAG for conversational knowledge
-> convergence / Alias: MD-DAG**
+> **Markdown-native DAG — heading = skeleton, links = magnetic lines,
+> body = iron filings, status = list.** Zero dependencies. Deterministic.
 
-Reference implementation in Rust of the [Lodestone Protocol (MD-DAG)
-v1.3.0](https://github.com/lodestone-protocol/lodestone-spec) — the
-language-agnostic protocol that grows out of knowledge dehydration in
-human–AI dialogue. Nodes act like lodestones that absorb conclusions, edges
-register dependencies and disagreements, and the state machine
-`draft → converged → aligned` marks each node's maturity.
+The Rust reference implementation of the [Lodestone Protocol v2.0-draft]
+(https://github.com/lodestone-protocol/lodestone-spec) — the protocol for
+**conversation as experience**: AI speech is auto-DAGified into lodestones
+(磁石) that absorb aligned info (iron filings) and shed noise (sand), so
+context is never squeezed by redundancy.
 
-[![CI](https://github.com/lodestone-protocol/lodestone-md/actions/workflows/ci.yml/badge.svg)](https://github.com/lodestone-protocol/lodestone-md/actions/workflows/ci.yml)
+v1.3.0 (HTML-comment JSON carrier) is **frozen** at git tag `v1.3.0`; this
+branch is the v2 line, **not frozen** — it evolves until it stops changing.
+
+## Why v2 (the magnet-ball philosophy)
+
+> People converse like several magnet balls rolling in sand: the balls are
+> main threads, the sand is redundancy and ambiguity. Balls absorb iron
+> filings (aligned info), filter out sand — structure sharpens, context
+> never gets crushed.
+
+v1.3 hid metadata in HTML comments as JSON — an invisible middle layer.
+v2 drops it: **markdown's own outline is the DAG**. Root `#` headings are
+lodestones, `##` sub-headings are the in-ball tree, `[label](#target)`
+links between lodestones are magnetic lines, and `- status:` lists carry
+the state machine `draft → converged → aligned`. Humans review the raw
+markdown; agents read projections on demand.
+
+## Read protocol — choices, not free text
+
+| Command | Level | What it gives |
+|---|---|---|
+| `mddag balls <file>` | L0 | one line per lodestone: title + status (+ summary if aligned) |
+| `mddag ball <slug> <file>` | L1 | one lodestone: summary + sub-heading tree |
+| `mddag body <slug> <file>` | L2 | body fragment (optional anchor) |
+| `mddag sediment <file>` | — | sediment zone index (converged archives) |
+| `mddag check <file>` | — | parse + diagnostics; exit 1 on errors |
+
+```console
+$ mddag balls session.md
+# 方案选型  [converged]
+# Anaphase 驾驶舱  [aligned]
+  驾驶舱是 Anaphase 的界面，不是 Helix 的。
+# 磁铁球哲学  [draft]
+
+$ mddag ball anaphase-驾驶舱 session.md
+# Anaphase 驾驶舱  [aligned]
+  summary: 驾驶舱是 Anaphase 的界面，不是 Helix 的。
+定位
+命名纠错
+```
+
+## Runtime — five streaming append ops
+
+`add-ball` / `absorb` / `advance-status` / `compress` / `append-sediment`
+(v2.0-draft §5). Each returns the new text + an audit record line
+(deterministic; the caller attaches time/source). `compress` moves an
+aligned body into the `# 沉淀区` zone, leaving `- summary:` +
+`[全文](#slug-full)` — the skeleton stays bounded.
+
+```rust
+use mddag::{scan, ops};
+
+let doc = scan(text);
+let next = ops::advance_status(text, "方案选型").text; // draft -> converged
+```
+
+## Determinism & diagnostics
+
+- Every public function is a pure function of input bytes; byte-identical
+  input → byte-identical output.
+- Diagnostics (v2.0-draft §8): `E-DUP-ID`, `E-MISSING-ID`, `E-CYCLE`,
+  `E-STATUS-TRANSITION`, `E-ABSORB-ALIGNED`, `W-STATUS-MISSING`,
+  `W-REF-NOT-FOUND`, `W-SELF-REF`, `W-SEDIMENT-REF`.
+
+## Build & test
+
+```console
+cargo build --release
+cargo test          # 25 tests, zero deps
+```
 
 ## Repositories
 
-- **lodestone-spec** (authoritative): protocol spec, error-code registry, and
-  the 25 Golden Fixtures. This repository imports the corpus as a submodule at
-  `vendor/lodestone-spec` and never edits it.
-- **lodestone-md** (this repo): the Rust parser + conformance test suite.
-
-## Quick start
-
-```bash
-# Fetch the fixture corpus (spec submodule) once:
-git submodule update --init --recursive
-
-cargo build --release
-target/release/mddag vendor/lodestone-spec/fixtures/10_example.md           # §8 contract JSON
-target/release/mddag --body concl-01 vendor/lodestone-spec/fixtures/10_example.md  # L2 targeted body
-target/release/mddag --projection vendor/lodestone-spec/fixtures/10_example.md     # appendix-A labels
-target/release/mddag --review vendor/lodestone-spec/fixtures/10_example.md         # disputes summary
-```
-
-As a library:
-
-```rust
-let result = mddag::parse(&markdown_text);
-// L1 skeleton: result.nodes / result.edges / result.diagnostics / result.graph
-// L2 targeted body: mddag::body_text(&markdown_text, "concl-01")
-// Appendix-A projection: mddag::projection::project(&result) / mddag::projection::review(&result)
-```
-
-## Three-level loading (the protocol's native read mode)
-
-| Level | Content | Typical use |
-|---|---|---|
-| L1 skeleton | node table + normalized edge set + diagnostics | rebuild global awareness, plan reads |
-| L2 targeted body | read one node by `body_start` / `body_end` | answer a specific question, trace a chain |
-| L3 full text | all bytes of the document | recall-complete tasks (audit / migration) |
-
-## Tests
-
-```bash
-cargo test                        # unit + Golden Fixture + determinism assertions
-UPDATE_GOLDEN=1 cargo test        # regenerate snapshots into the submodule (spec-repo change! review by hand)
-cargo clippy --all-targets -- -D warnings   # gate: warnings denied
-cargo run --release --example bench -- 5000 # coarse perf check (not a CI gate)
-```
-
-### Verification status (measured 2026-09-02)
-
-| Gate | Measured | Verified by |
-|---|---|---|
-| `cargo test` | ✅ 23 passed (15 unit + 6 Golden + 2 P1 integration) | CI / local |
-| `cargo clippy --all-targets -- -D warnings` | ✅ 0 warnings | CI / local |
-| §10 golden baseline | ✅ chars 12/74/23/11/3, ranges 5–5/9–15/19–19/23–23/27–27, empty global graph | `tests/golden.rs::spec_10_example_values` |
-| parse determinism | ✅ two parses of one input, byte-identical output | `tests/golden.rs::parse_is_deterministic` |
-| diagnostic code coverage | ✅ all 14 codes of §11 (25 fixtures, one-to-one) | spec repo `fixtures/MANIFEST.md` |
-| L1/L2 loading semantics | ✅ `body_text()` matches derived fields char-for-char (fences, empty bodies) | `tests/p1.rs` |
-
-## Project governance
-
-The repository grows under the [phyt-DNA](https://github.com/Jasonmilk/phyt-DNA)
-methodology; repository docs are written in Chinese and code comments in
-English:
-
-- `docs/VISION.md` — vision, atomic principles, and the seven philosophies
-  (closed loop / maximal reuse / maximal decoupling / fetch on demand / load
-  on demand / physical-time freshness / determinism first)
-- `docs/DNA.md` — immutable principles and project-specific iron rules
-- `docs/RNA.md` — three-layer loading protocol and AI collaboration rules
-- `docs/PLAN.md` — growth-stage navigator (read first in a new session)
-- `docs/decisions/` — implementation ADRs (ADR-0001, ADR-0002)
-
-## License
-
-MIT
+- **lodestone-spec** — authoritative protocol: `spec/v2.0-draft.md`,
+  `adr/ADR-0002`, `fixtures/v2/` (pure-markdown corpus).
+- **lodestone-md** — this implementation (v2 line).
+- v1.3 frozen assets live in the spec repo under `spec/v1.3.md`,
+  `fixtures/` (25 Golden Fixtures), `registry/errors.md`.

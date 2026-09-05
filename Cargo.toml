@@ -1,20 +1,13 @@
 [package]
 name = "mddag"
-version = "1.3.0"
+version = "2.0.0"
 edition = "2021"
 license = "MIT"
-description = "Implements Lodestone Protocol v1.3.0 — Markdown-Embedded DAG (alias MD-DAG) reference parser for conversational knowledge convergence"
+description = "Implements Lodestone Protocol v2.0-draft (MD-DAG 2) — markdown-native DAG: heading=skeleton, links=magnetic lines, body=iron filings, status=list. L0/L1/L2 on-demand read + streaming append ops."
 repository = "https://github.com/lodestone-protocol/lodestone-md"
 readme = "README.md"
 keywords = ["markdown", "dag", "commonmark", "knowledge-graph", "ai-agent"]
 categories = ["parser-implementations"]
-documentation = "https://docs.rs/mddag"
-exclude = [
-    "/docs",
-    "/tests",
-    "/.github",
-    "/README.zh-CN.md",
-]
 
 [lib]
 name = "mddag"
@@ -25,7 +18,5 @@ name = "mddag"
 path = "src/main.rs"
 
 [dependencies]
-comrak = "0.54.0"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-unicode-normalization = "0.1"
+# Zero dependencies: v2 parsing is a line-level scanner over CommonMark
+# structure (headings + lists + links) — no AST, no JSON, no serde.

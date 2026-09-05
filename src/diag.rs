@@ -1,62 +1,39 @@
-//! Diagnostic code constants (spec §11, one-to-one) and the entry shape (§8.3).
-//!
-//! DNA rules 2/7: warnings never block parsing; codes are constants, never
-//! bare strings scattered through the codebase.
+//! Diagnostics (v2.0-draft §8): inherited codes + new ones. All diagnostics
+//! are a pure function of the document bytes — the determinism contract.
 
-use serde::Serialize;
+/// Severity of a diagnostic.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Severity {
+    Warning,
+    Error,
+}
 
-pub const E_MISSING_ID: &str = "E-MISSING-ID";
-pub const E_META_SYNTAX: &str = "E-META-SYNTAX";
-pub const E_META_FIELD: &str = "E-META-FIELD";
-pub const E_DUP_ID: &str = "E-DUP-ID";
-pub const E_REF_NOT_FOUND: &str = "E-REF-NOT-FOUND";
-pub const E_CYCLE: &str = "E-CYCLE";
-pub const W_VERSION_MISMATCH: &str = "W-VERSION-MISMATCH";
-pub const W_DOC_META: &str = "W-DOC-META";
-pub const W_CYCLE_DECLARED: &str = "W-CYCLE-DECLARED";
-pub const W_REDUNDANT_EDGE: &str = "W-REDUNDANT-EDGE";
-pub const W_META_PLACEMENT: &str = "W-META-PLACEMENT";
-pub const W_REDUNDANT_META: &str = "W-REDUNDANT-META";
-pub const W_UPSTREAM_PENDING: &str = "W-UPSTREAM-PENDING";
-pub const W_NFC_VIOLATION: &str = "W-NFC-VIOLATION";
-
-#[derive(Serialize, Clone, Debug, PartialEq)]
-pub struct Diagnostic {
-    pub code: String,
-    pub level: String,
-    pub node_id: Option<String>,
-    pub edge: Option<String>,
+/// A diagnostic code with a message.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Diag {
+    pub severity: Severity,
+    pub code: &'static str,
+    pub line: usize,
     pub message: String,
 }
 
-impl Diagnostic {
-    pub fn error(
-        code: &str,
-        node_id: Option<String>,
-        edge: Option<String>,
-        message: impl Into<String>,
-    ) -> Self {
-        Diagnostic {
-            code: code.to_string(),
-            level: "error".to_string(),
-            node_id,
-            edge,
-            message: message.into(),
-        }
+impl Diag {
+    pub fn warn(code: &'static str, line: usize, message: impl Into<String>) -> Self {
+        Diag { severity: Severity::Warning, code, line, message: message.into() }
     }
-
-    pub fn warning(
-        code: &str,
-        node_id: Option<String>,
-        edge: Option<String>,
-        message: impl Into<String>,
-    ) -> Self {
-        Diagnostic {
-            code: code.to_string(),
-            level: "warning".to_string(),
-            node_id,
-            edge,
-            message: message.into(),
-        }
+    pub fn error(code: &'static str, line: usize, message: impl Into<String>) -> Self {
+        Diag { severity: Severity::Error, code, line, message: message.into() }
     }
 }
+
+/// The stable diagnostic codes (v2.0-draft §8).
+pub const W_STATUS_MISSING: &str = "W-STATUS-MISSING";
+pub const W_REF_NOT_FOUND: &str = "W-REF-NOT-FOUND";
+pub const W_SELF_REF: &str = "W-SELF-REF";
+pub const W_SEDIMENT_REF: &str = "W-SEDIMENT-REF";
+pub const E_MISSING_ID: &str = "E-MISSING-ID";
+pub const E_DUP_ID: &str = "E-DUP-ID";
+pub const E_CYCLE: &str = "E-CYCLE";
+pub const E_STATUS_TRANSITION: &str = "E-STATUS-TRANSITION";
+pub const E_SEDIMENT_REF: &str = "E-SEDIMENT-REF";
+pub const E_ABSORB_ALIGNED: &str = "E-ABSORB-ALIGNED";
