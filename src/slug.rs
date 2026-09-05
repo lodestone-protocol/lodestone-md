@@ -12,9 +12,12 @@ pub fn slugify(title: &str) -> Option<String> {
         for lower in ch.to_lowercase() {
             // Keep ASCII letters/digits/`_`/`-`; keep any non-ASCII char
             // (CJK etc.) as-is; everything else (spaces, punctuation) -> `-`.
-            if lower.is_ascii_lowercase() || lower.is_ascii_digit() || lower == '_' || lower == '-' {
-                out.push(lower);
-            } else if !lower.is_ascii() {
+            if lower.is_ascii_lowercase()
+                || lower.is_ascii_digit()
+                || lower == '_'
+                || lower == '-'
+                || !lower.is_ascii()
+            {
                 out.push(lower);
             } else {
                 out.push('-');

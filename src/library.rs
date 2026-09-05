@@ -42,7 +42,7 @@ pub fn index(sessions: &[Session], keep: usize) -> String {
     let total = items.len();
     for (i, (s, created, path)) in items.iter().enumerate() {
         let in_window = total.saturating_sub(i) <= keep;
-        let name = path.rsplit('/').next().unwrap_or(&path);
+        let name = path.rsplit('/').next().unwrap_or(path);
         let date = if created.is_empty() { "?" } else { created.as_str() };
         out.push_str(&format!("## {name}  [{date}]\n"));
         if in_window {

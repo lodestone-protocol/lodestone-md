@@ -12,10 +12,10 @@ use std::process::exit;
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let code = match args.get(1).map(String::as_str) {
-        Some("nodes") => cmd_read(&args, |d| mddag::project::l0(d)),
+        Some("nodes") => cmd_read(&args, mddag::project::l0),
         Some("node") => cmd_node(&args),
         Some("body") => cmd_body(&args),
-        Some("sediment") => cmd_read(&args, |d| mddag::project::sediment_index(d)),
+        Some("sediment") => cmd_read(&args, mddag::project::sediment_index),
         Some("check") => cmd_check(&args),
         Some("decay") => cmd_decay(&args),
         Some("strip") => cmd_strip(&args),

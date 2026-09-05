@@ -65,7 +65,7 @@ pub fn scan(text: &str) -> Doc {
     }
 
     // The sediment zone is the LAST root heading titled exactly 沉淀区.
-    if let Some(&(_, ref t)) = roots.last() {
+    if let Some((_, t)) = roots.last() {
         if t == SEDIMENT_TITLE {
             let start = roots.last().unwrap().0;
             if let Some(prev) = roots.iter().rev().nth(1) {

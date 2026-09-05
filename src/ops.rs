@@ -45,7 +45,7 @@ pub fn absorb(text: &str, slug: &str, fragment: &str) -> OpOutcome {
     let audit = format!("- mddag-audit: absorb {slug}");
     // insert before the next lodestone title or EOF; after the last body line.
     let lines: Vec<&str> = text.lines().collect();
-    let insert_at = if l.end_line <= l.start_line { l.end_line } else { l.end_line };
+    let insert_at = l.end_line; // after the last body line of the node region
     let fragment_block = if fragment.trim().is_empty() { String::new() } else { format!("\n{fragment}\n") };
     let mut out = String::new();
     for (i, line) in lines.iter().enumerate() {
@@ -175,11 +175,7 @@ pub fn strip(text: &str, keep: &[&str]) -> OpOutcome {
         out.push_str(line);
         out.push('\n');
     }
-    let audit = if cut > 0 {
-        format!("- mddag-audit: strip {cut} edges")
-    } else {
-        format!("- mddag-audit: strip 0 edges")
-    };
+    let audit = format!("- mddag-audit: strip {cut} edges");
     let _ = doc;
     OpOutcome { text: out, audit, diagnostics: Vec::new() }
 }

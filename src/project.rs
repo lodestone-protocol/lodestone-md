@@ -49,9 +49,9 @@ pub fn l2(doc: &Doc, slug: &str, anchor: Option<&str>) -> Option<String> {
         // narrow: start at the anchor sub-heading, end at next sub-heading
         let start = lines.iter().position(|l| l.trim_start().starts_with("## ") && l.contains(a))?;
         let mut end = lines.len();
-        for i in start + 1..lines.len() {
-            if lines[i].trim_start().starts_with("## ") {
-                end = i;
+        for (i, line) in lines[start + 1..].iter().enumerate() {
+            if line.trim_start().starts_with("## ") {
+                end = start + 1 + i;
                 break;
             }
         }
