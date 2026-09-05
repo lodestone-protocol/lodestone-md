@@ -18,12 +18,14 @@ fn main() {
         Some("sediment") => cmd_read(&args, |d| mddag::project::sediment_index(d)),
         Some("check") => cmd_check(&args),
         Some("decay") => cmd_decay(&args),
+        Some("strip") => cmd_strip(&args),
+        Some("library") => cmd_library(&args),
         Some("version") => {
             println!("mddag {}", mddag::PROTOCOL_VERSION);
             0
         }
         _ => {
-            eprintln!("usage: mddag <balls|ball|body|sediment|check|decay|version> ...");
+            eprintln!("usage: mddag <balls|ball|body|sediment|check|decay|strip|library|version> ...");
             2
         }
     };
@@ -164,6 +166,69 @@ fn cmd_decay(args: &[String]) -> i32 {
             1
         }
     }
+}
+
+fn cmd_strip(args: &[String]) -> i32 {
+    let Some(path) = args.get(2) else {
+        eprintln!("usage: mddag strip <file>   # 剔除全部磁力线（窗口外会话降级）");
+        return 2;
+    };
+    match std::fs::read_to_string(path) {
+        Ok(text) => {
+            let r = mddag::ops::strip(&text, &[]);
+            match std::fs::write(path, &r.text) {
+                Ok(_) => {
+                    eprintln!("{}", r.audit);
+                    let doc = mddag::scan(&r.text);
+                    println!("[ok] strip 完成, 磁石数 {} 磁力线数 {}",
+                        doc.lodestones.len(),
+                        doc.lodestones.iter().map(|l| l.lines.len()).sum::<usize>());
+                    0
+                }
+                Err(e) => { eprintln!("mddag: 写入失败 {path}: {e}"); 1 }
+            }
+        }
+        Err(e) => { eprintln!("mddag: 读取失败 {path}: {e}"); 1 }
+    }
+}
+
+fn cmd_library(args: &[String]) -> i32 {
+    let Some(dir) = args.get(2) else {
+        eprintln!("usage: mddag library <dir> [--keep N]   # N 默认 12（示例，可调）");
+        return 2;
+    };
+    let mut keep = 12usize; // example default; --keep overrides (no hardcoding)
+    let mut i = 3;
+    while i < args.len() {
+        if args[i] == "--keep" {
+            if let Some(v) = args.get(i + 1) {
+                if let Ok(n) = v.parse::<usize>() {
+                    keep = n;
+                }
+            }
+            i += 2;
+        } else {
+            i += 1;
+        }
+    }
+    let mut sessions: Vec<mddag::library::Session> = Vec::new();
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        eprintln!("mddag: 无法读取目录 {dir}");
+        return 1;
+    };
+    let mut paths: Vec<std::path::PathBuf> = entries
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.extension().map(|x| x == "md").unwrap_or(false))
+        .collect();
+    paths.sort();
+    for p in paths {
+        if let Ok(text) = std::fs::read_to_string(&p) {
+            let doc = mddag::scan(&text);
+            sessions.push(mddag::library::Session { path: p.display().to_string(), doc });
+        }
+    }
+    print!("{}", mddag::library::index(&sessions, keep));
+    0
 }
 
 fn print_diags(doc: &mddag::Doc) {

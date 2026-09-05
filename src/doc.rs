@@ -66,6 +66,10 @@ pub struct Lodestone {
 pub struct Doc {
     /// Raw document text (byte-identical copy) — L2 body extraction reads it.
     pub text: String,
+    /// Optional document-level header metadata: `- session: <id>`,
+    /// `- created: <date>` (values written by the consumer; protocol only
+    /// defines the shape — zero hardcoded values).
+    pub meta: Vec<(String, String)>,
     pub lodestones: Vec<Lodestone>,
     /// Sediment zone: `# 沉淀区` region — converged bodies archived here.
     pub sediment: Option<Sediment>,

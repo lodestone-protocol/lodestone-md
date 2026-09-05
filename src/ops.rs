@@ -151,6 +151,54 @@ pub fn append_sediment(text: &str, full_slug: &str, content: &str) -> OpOutcome 
     OpOutcome { text: out, audit, diagnostics: Vec::new() }
 }
 
+/// strip — cut magnetic lines out of a document ("the edge leaves the
+/// global graph"). Pure magnetic-line lines (a line whose trimmed content
+/// is entirely `[label](#slug)` links) are removed; body text with inline
+/// links is kept. `keep` lists slugs whose magnetic lines survive — the
+/// caller passes the in-window slug set for cross-session dangling
+/// protection. Audit records the number of edges cut.
+pub fn strip(text: &str, keep: &[&str]) -> OpOutcome {
+    let doc = scan(text);
+    let mut cut = 0usize;
+    let mut out = String::new();
+    for line in text.lines() {
+        let t = line.trim();
+        if !t.is_empty() && is_pure_link_line(t) {
+            let links = extract_links_inline(t);
+            let all_kept = !links.is_empty()
+                && links.iter().all(|(_, target)| keep.iter().any(|k| *k == target));
+            if links.is_empty() || !all_kept {
+                cut += 1;
+                continue; // drop the whole magnetic-line line
+            }
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    let audit = if cut > 0 {
+        format!("- mddag-audit: strip {cut} edges")
+    } else {
+        format!("- mddag-audit: strip 0 edges")
+    };
+    let _ = doc;
+    OpOutcome { text: out, audit, diagnostics: Vec::new() }
+}
+
+/// True when the trimmed line is entirely magnetic-line links.
+fn is_pure_link_line(t: &str) -> bool {
+    let links = extract_links_inline(t);
+    !links.is_empty() && reconstruct(links) == t
+}
+
+/// Extract links + reconstruct for the purity check.
+fn extract_links_inline(t: &str) -> Vec<(String, String)> {
+    crate::scan::extract_links_for_ops(t)
+}
+
+fn reconstruct(links: Vec<(String, String)>) -> String {
+    links.into_iter().map(|(l, t)| format!("[{l}](#{t})")).collect::<Vec<_>>().join(" ")
+}
+
 /// decay — forget a target: remove a whole lodestone, a sediment entry,
 /// or a line range inside a lodestone body. The audit line records what was
 /// forgotten; the caller decides WHEN (TTL policy with its own clock).

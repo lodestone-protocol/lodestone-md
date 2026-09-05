@@ -37,6 +37,8 @@ markdown; agents read projections on demand.
 | `mddag body <slug> <file>` | L2 | body fragment (optional anchor) |
 | `mddag sediment <file>` | — | sediment zone index (converged archives) |
 | `mddag check <file>` | — | parse + diagnostics; exit 1 on errors |
+| `mddag strip <file>` | — | cut magnetic lines (window-out session downgrade) |
+| `mddag library <dir> [--keep N]` | — | cross-session window: recent N full L0, older collapsed (N injected, example 12) |
 
 ```console
 $ mddag balls session.md
@@ -55,7 +57,8 @@ $ mddag ball anaphase-驾驶舱 session.md
 ## Runtime — five streaming append ops
 
 `add-ball` / `absorb` / `advance-status` / `compress` / `append-sediment`
-/ `decay` (v2.0-draft §5). Each returns the new text + an audit record line
+/ `decay` / `strip` (v2.0-draft §5). Each returns the new text + an audit
+record line
 (deterministic; the caller attaches time/source). `compress` moves an
 aligned body into the `# 沉淀区` zone, leaving `- summary:` +
 `[全文](#slug-full)` — the skeleton stays bounded. `decay` is the forgetting
@@ -71,6 +74,15 @@ let doc = scan(text);
 let next = ops::advance_status(text, "方案选型").text; // draft -> converged
 ```
 
+## Session window (显性/隐性分支)
+
+Every session document may carry header metadata (`- session:` / `- created:`)
+written by the consumer — the protocol only defines the shape. `mddag library`
+sorts sessions by date and projects the window: the `keep` most recent show
+their full L0, older ones collapse to one summary line (hidden branch,
+retrievable on demand via L2 — cutting edges ≠ destroying content).
+`mddag strip` removes pure magnetic-line lines with an audit record.
+
 ## Determinism & diagnostics
 
 - Every public function is a pure function of input bytes; byte-identical
@@ -83,7 +95,7 @@ let next = ops::advance_status(text, "方案选型").text; // draft -> converged
 
 ```console
 cargo build --release
-cargo test          # 30 tests, zero deps
+cargo test          # 33 tests, zero deps
 ```
 
 ## Repositories

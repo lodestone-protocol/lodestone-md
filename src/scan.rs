@@ -19,6 +19,20 @@ pub fn scan(text: &str) -> Doc {
     let raw = text.to_string();
     let lines: Vec<&str> = text.lines().collect();
     let mut diags: Vec<Diag> = Vec::new();
+    // Header metadata (optional, document-level): `- key: value` lines
+    // before the first root heading. Values are written by the consumer.
+    let mut meta: Vec<(String, String)> = Vec::new();
+    for line in &lines {
+        let t = line.trim();
+        if t.is_empty() {
+            continue;
+        }
+        if let Some((k, v)) = meta_item(line) {
+            meta.push((k.trim().to_string(), v.trim().to_string()));
+        } else {
+            break; // first non-meta content (a root heading) ends the header
+        }
+    }
     let mut lodestones: Vec<Lodestone> = Vec::new();
     let mut sediment: Option<Sediment> = None;
 
@@ -104,8 +118,8 @@ pub fn scan(text: &str) -> Doc {
         let mut meta_end = start; // last line of the status list block
 
         // status list = first non-blank block after the title (start+1)
-        let mut j = start + 1; // 1-based
-        while j < end {
+        let mut j = start + 1; // 1-based; inclusive of the region's last line
+        while j <= end {
             let line = lines[j - 1];
             if line.trim().is_empty() {
                 j += 1;
@@ -217,7 +231,7 @@ pub fn scan(text: &str) -> Doc {
     // for magnetic lines targeting the sediment zone heading — handled above
     // as W; the error class stays reserved for strict mode. Keep it simple.
 
-    Doc { text: raw, lodestones, sediment, diagnostics: diags }
+    Doc { text: raw, meta, lodestones, sediment, diagnostics: diags }
 }
 
 /// Root-level heading: zero-indent `# ` (ATX level-1) outside fenced blocks.
@@ -260,6 +274,11 @@ fn meta_item(line: &str) -> Option<(&str, &str)> {
     let rest = line.strip_prefix("- ")?;
     let (key, value) = rest.split_once(':')?;
     Some((key.trim(), value))
+}
+
+/// Extract `[label](#target-slug)` links from a text line.
+pub(crate) fn extract_links_for_ops(line: &str) -> Vec<(String, String)> {
+    extract_links(line)
 }
 
 /// Extract `[label](#target-slug)` links from a text line.
