@@ -39,6 +39,7 @@ markdown; agents read projections on demand.
 | `mddag check <file>` | — | parse + diagnostics; exit 1 on errors |
 | `mddag strip <file>` | — | cut magnetic lines (window-out session downgrade) |
 | `mddag library <dir> [--keep N]` | — | cross-session window: recent N full L0, older collapsed (N injected, example 12) |
+| `mddag index <dir> [-o PATH] [--check]` | — | library-layer `.lodestone` snapshot: cross-doc validation (path/slug/cycle) + staleness check |
 
 ```console
 $ mddag balls session.md
@@ -74,6 +75,19 @@ let doc = scan(text);
 let next = ops::advance_status(text, "方案选型").text; // draft -> converged
 ```
 
+## Cross-document library (跨文档库层)
+
+A cross-document reference is the same syntax with a non-empty path:
+`[label](path#slug)` — `#slug` is the path-empty special case. The
+document layer only shape-checks it (`W-CROSS-DOC`); `mddag index`
+resolves targets at the library layer (missing path / missing slug /
+cross-document cycle) and writes a deterministic `.lodestone` snapshot —
+an mddag document itself, re-parseable by `scan` (self-bootstrapping),
+committable to git, timestamp-free. Inbound edges are derived on demand
+(outgoing ⇔ inbound bijection — storing both would duplicate facts).
+`--check` compares byte-for-byte against a fresh scan to detect a stale
+index.
+
 ## Session window (显性/隐性分支)
 
 Every session document may carry header metadata (`- session:` / `- created:`)
@@ -95,7 +109,7 @@ retrievable on demand via L2 — cutting edges ≠ destroying content).
 
 ```console
 cargo build --release
-cargo test          # 33 tests, zero deps
+cargo test          # 38 tests, zero deps
 ```
 
 ## Repositories

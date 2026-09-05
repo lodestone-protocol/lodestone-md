@@ -20,12 +20,13 @@ fn main() {
         Some("decay") => cmd_decay(&args),
         Some("strip") => cmd_strip(&args),
         Some("library") => cmd_library(&args),
+        Some("index") => cmd_index(&args),
         Some("version") => {
             println!("mddag {}", mddag::PROTOCOL_VERSION);
             0
         }
         _ => {
-            eprintln!("usage: mddag <balls|ball|body|sediment|check|decay|strip|library|version> ...");
+            eprintln!("usage: mddag <balls|ball|body|sediment|check|decay|strip|library|index|version> ...");
             2
         }
     };
@@ -224,11 +225,84 @@ fn cmd_library(args: &[String]) -> i32 {
     for p in paths {
         if let Ok(text) = std::fs::read_to_string(&p) {
             let doc = mddag::scan(&text);
-            sessions.push(mddag::library::Session { path: p.display().to_string(), doc });
+            let rel = p.strip_prefix(dir).unwrap_or(&p).display().to_string();
+            sessions.push(mddag::library::Session { path: rel, doc });
         }
     }
     print!("{}", mddag::library::index(&sessions, keep));
     0
+}
+
+fn cmd_index(args: &[String]) -> i32 {
+    let Some(dir) = args.get(2) else {
+        eprintln!("usage: mddag index <dir> [-o PATH] [--check]");
+        return 2;
+    };
+    let mut out_path = format!("{dir}/.lodestone");
+    let mut check_only = false;
+    let mut i = 3;
+    while i < args.len() {
+        match args[i].as_str() {
+            "-o" => {
+                if let Some(v) = args.get(i + 1) { out_path = v.clone(); }
+                i += 2;
+            }
+            "--check" => { check_only = true; i += 1; }
+            _ => i += 1,
+        }
+    }
+    let mut sessions: Vec<mddag::library::Session> = Vec::new();
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        eprintln!("mddag: 无法读取目录 {dir}");
+        return 1;
+    };
+    let mut paths: Vec<std::path::PathBuf> = entries
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.extension().map(|x| x == "md").unwrap_or(false))
+        .collect();
+    paths.sort();
+    for p in paths {
+        if let Ok(text) = std::fs::read_to_string(&p) {
+            let doc = mddag::scan(&text);
+            let rel = p.strip_prefix(dir).unwrap_or(&p).display().to_string();
+            sessions.push(mddag::library::Session { path: rel, doc });
+        }
+    }
+    match mddag::index::project(&sessions) {
+        Ok(fresh) => {
+            if check_only {
+                match std::fs::read_to_string(&out_path) {
+                    Ok(existing) if existing == fresh => {
+                        println!("[ok] 索引最新（{out_path} 与目录一致）");
+                        0
+                    }
+                    Ok(_) => {
+                        eprintln!("mddag: 索引已过期（{out_path} 与目录不一致），请运行 mddag index {dir}");
+                        1
+                    }
+                    Err(_) => {
+                        eprintln!("mddag: 索引不存在（{out_path}），请运行 mddag index {dir}");
+                        1
+                    }
+                }
+            } else {
+                match std::fs::write(&out_path, &fresh) {
+                    Ok(_) => {
+                        println!("[ok] 已写入 {out_path}（{}）", fresh.lines().count().max(1));
+                        0
+                    }
+                    Err(e) => { eprintln!("mddag: 写入失败 {out_path}: {e}"); 1 }
+                }
+            }
+        }
+        Err(d) => {
+            for x in &d {
+                eprintln!("{} L{}: {}", x.code, x.line, x.message);
+            }
+            eprintln!("mddag: 库层校验失败，索引未生成");
+            1
+        }
+    }
 }
 
 fn print_diags(doc: &mddag::Doc) {

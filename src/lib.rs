@@ -11,6 +11,7 @@
 
 pub mod diag;
 pub mod doc;
+pub mod index;
 pub mod library;
 pub mod ops;
 pub mod project;

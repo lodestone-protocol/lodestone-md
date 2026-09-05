@@ -40,6 +40,18 @@ pub struct MagneticLine {
     pub line: usize,
 }
 
+/// A cross-document reference `[label](path#slug)` (v2.0-draft §3.7).
+/// The document layer only checks its shape (W-CROSS-DOC); target
+/// resolution belongs to the library layer (mddag index).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CrossLink {
+    pub from_slug: String,
+    pub path: String,
+    pub to_slug: String,
+    pub label: String,
+    pub line: usize,
+}
+
 /// One lodestone (node): a root-level `#` heading region (v2.0-draft §3.1).
 /// Named after the magnet metaphor — the lodestone is the ball itself.
 #[derive(Debug, Clone)]
@@ -70,6 +82,8 @@ pub struct Doc {
     /// `- created: <date>` (values written by the consumer; protocol only
     /// defines the shape — zero hardcoded values).
     pub meta: Vec<(String, String)>,
+    /// Cross-document references collected during scan (library layer input).
+    pub cross_links: Vec<CrossLink>,
     pub lodestones: Vec<Lodestone>,
     /// Sediment zone: `# 沉淀区` region — converged bodies archived here.
     pub sediment: Option<Sediment>,

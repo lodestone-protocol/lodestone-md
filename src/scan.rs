@@ -6,8 +6,8 @@
 //! zero-indent `# ` line that is a top-level block (we track fenced blocks
 //! to exclude headings inside them).
 
-use crate::diag::{Diag, E_DUP_ID, E_MISSING_ID, W_REF_NOT_FOUND, W_SEDIMENT_REF, W_SELF_REF, W_STATUS_MISSING};
-use crate::doc::{Doc, Lodestone, MagneticLine, Sediment, SedimentEntry, Status};
+use crate::diag::{Diag, E_DUP_ID, E_MISSING_ID, W_CROSS_DOC, W_REF_NOT_FOUND, W_SEDIMENT_REF, W_SELF_REF, W_STATUS_MISSING};
+use crate::doc::{CrossLink, Doc, Lodestone, MagneticLine, Sediment, SedimentEntry, Status};
 use crate::slug::slugify;
 
 /// The reserved sediment heading (v2.0-draft §3.1): `# 沉淀区`.
@@ -22,6 +22,7 @@ pub fn scan(text: &str) -> Doc {
     // Header metadata (optional, document-level): `- key: value` lines
     // before the first root heading. Values are written by the consumer.
     let mut meta: Vec<(String, String)> = Vec::new();
+    let mut cross_links: Vec<CrossLink> = Vec::new();
     for line in &lines {
         let t = line.trim();
         if t.is_empty() {
@@ -155,6 +156,7 @@ pub fn scan(text: &str) -> Doc {
         let mut subheadings: Vec<(usize, usize, String)> = Vec::new();
         let mut body: Vec<usize> = Vec::new();
         let mut lines_out: Vec<MagneticLine> = Vec::new();
+        let mut cross_out: Vec<CrossLink> = Vec::new();
         let mut in_f = None;
         let mut f_len = 0usize;
         for (idx, line) in lines.iter().enumerate() {
@@ -194,6 +196,22 @@ pub fn scan(text: &str) -> Doc {
                 }
                 lines_out.push(MagneticLine { from: slug.clone(), to: target, label, line: n });
             }
+            // cross-document references: shape check only (library layer
+            // resolves targets) — v2.0-draft §3.7 / ADR-0003 D1.
+            for mut cl in extract_links_full(line) {
+                if cl.path.is_empty() {
+                    continue; // local link — handled above as magnetic line
+                }
+                cl.from_slug = slug.clone();
+                cl.line = n;
+                let (p, t) = (cl.path.clone(), cl.to_slug.clone());
+                cross_out.push(cl);
+                diags.push(Diag::warn(
+                    W_CROSS_DOC,
+                    n,
+                    format!("跨文档引用 {p} → {t}，目标由库层校验（mddag index）"),
+                ));
+            }
             if !line.trim().is_empty() {
                 body.push(n);
             }
@@ -205,6 +223,7 @@ pub fn scan(text: &str) -> Doc {
             start_line: start, end_line: end,
             subheadings, lines: lines_out, body,
         });
+        cross_links.extend(cross_out);
     }
 
     // Resolve magnetic line targets + duplicate slugs.
@@ -231,7 +250,7 @@ pub fn scan(text: &str) -> Doc {
     // for magnetic lines targeting the sediment zone heading — handled above
     // as W; the error class stays reserved for strict mode. Keep it simple.
 
-    Doc { text: raw, meta, lodestones, sediment, diagnostics: diags }
+    Doc { text: raw, meta, cross_links, lodestones, sediment, diagnostics: diags }
 }
 
 /// Root-level heading: zero-indent `# ` (ATX level-1) outside fenced blocks.
@@ -283,6 +302,17 @@ pub(crate) fn extract_links_for_ops(line: &str) -> Vec<(String, String)> {
 
 /// Extract `[label](#target-slug)` links from a text line.
 fn extract_links(line: &str) -> Vec<(String, String)> {
+    extract_links_full(line)
+        .into_iter()
+        .filter(|l| l.path.is_empty())
+        .map(|l| (l.label, l.to_slug))
+        .collect()
+}
+
+/// Parse every `[label](...)` link in a line. `(#slug)` yields a
+/// document-local link (path None); `(path#slug)` yields a cross-document
+/// reference (v2.0-draft §3.7). Deterministic pure function of the line.
+pub(crate) fn extract_links_full(line: &str) -> Vec<super::doc::CrossLink> {
     let mut out = Vec::new();
     let mut rest = line;
     while let Some(open) = rest.find('[') {
@@ -294,9 +324,33 @@ fn extract_links(line: &str) -> Vec<(String, String)> {
             let end = hash.find(')').unwrap_or(hash.len());
             let target = &hash[..end];
             if !target.is_empty() {
-                out.push((label.to_string(), target.to_string()));
+                out.push(super::doc::CrossLink {
+                    from_slug: String::new(),
+                    path: String::new(),
+                    to_slug: target.to_string(),
+                    label: label.to_string(),
+                    line: 0,
+                });
             }
             rest = &hash[end..];
+        } else if let Some(paren) = after_label.strip_prefix('(') {
+            // generic markdown link — keep only `path#slug` shapes
+            let end = paren.find(')').unwrap_or(paren.len());
+            let target = &paren[..end];
+            if let Some(hash) = target.find('#') {
+                let path = &target[..hash];
+                let slug = &target[hash + 1..];
+                if !path.is_empty() && !slug.is_empty() {
+                    out.push(super::doc::CrossLink {
+                        from_slug: String::new(),
+                        path: path.to_string(),
+                        to_slug: slug.to_string(),
+                        label: label.to_string(),
+                        line: 0,
+                    });
+                }
+            }
+            rest = &paren[end..];
         } else {
             rest = after_label;
         }
